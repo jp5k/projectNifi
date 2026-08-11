@@ -24,6 +24,9 @@ to change domain again.
 Fictional seed data lives in `sample-data/` (`stocks.json`,
 `price-updates.json`) — see `sample-data/README.md`.
 
+For a plain-English walkthrough of what the finished system actually does
+(no diagrams, no jargon), see [`how-it-works.md`](how-it-works.md).
+
 ## Architecture
 
 Three small services, chosen to demonstrate both synchronous and asynchronous
@@ -147,6 +150,9 @@ infrastructure (not built by us) rather than part of the Spring apps:
 - **RabbitMQ management UI** — inspect queues/messages in the browser.
 - **Apache NiFi UI** — build/watch the dataflow on NiFi's flow canvas.
 
+See `docs/local-dev.md` (once created — see the Local Developer Experience
+milestone) for the exact local URLs/ports for everything above.
+
 ## Working method
 
 - Work through the checklist **one item at a time**. Finish and verify one before
@@ -155,6 +161,31 @@ infrastructure (not built by us) rather than part of the Spring apps:
   optional but helpful.
 - This doc is editable — reorder, add, cut, or split items whenever priorities
   change.
+- An item isn't done just because it works — it also has to clear the
+  **Definition of Done** below before being ticked off.
+
+## Definition of Done
+
+A standing bar every checklist item is measured against — not one-off tasks,
+apply continuously as each service/feature lands:
+
+- **Test coverage** — ≥90% JUnit line coverage per module, enforced by the
+  JaCoCo Maven plugin (build fails below threshold, bound to `verify`). Unit
+  tests for services (Mockito), integration tests (`MockMvc`) for controllers.
+- **Security practices** — no secrets committed (env vars only — the repo
+  already `.gitignore`s common secret/credential patterns); centralized
+  exception handling never leaks stack traces/internal detail in API
+  responses; Actuator endpoints locked down beyond health/info; dependencies
+  scanned for known vulnerabilities (OWASP Dependency-Check); passwords, once
+  persisted, hashed with `BCryptPasswordEncoder`; classification/RBAC checks
+  (see Data Classification & Access Control) always enforced server-side,
+  never trusted from the client.
+- **Documentation** — every public class and method gets a doc comment
+  (Javadoc) explaining what it does and *why*, not just restating the
+  signature; non-trivial logic gets inline comments walking through the
+  reasoning. This project is explicitly for learning, so comments favor being
+  thorough over minimal — the usual "avoid over-commenting" default is
+  deliberately relaxed here, project-wide.
 
 ## Roadmap checklist
 
@@ -165,11 +196,16 @@ infrastructure (not built by us) rather than part of the Spring apps:
 - [ ] Basic CRUD REST endpoints for `Stock` (entity returned directly, no DTOs yet) — verify via curl/Postman + H2 console
 - [ ] Seed `stock-service` with `sample-data/stocks.json` on startup (e.g. `CommandLineRunner` or `data.sql`)
 
+### Cross-cutting: Testing & Security Setup
+- [ ] Add JaCoCo Maven plugin to the parent POM: coverage report + a ≥90% line-coverage check bound to `verify`
+- [ ] Add OWASP Dependency-Check Maven plugin to the parent POM for dependency vulnerability scanning
+- [ ] Confirm `.gitignore`'s existing secret/credential patterns extend cleanly to each module's `application*.properties`
+
 ### Solidify the basics
 - [ ] Request/response DTOs + mapping; refactor controller to use them
 - [ ] Input validation (`spring-boot-starter-validation`)
-- [ ] Centralized exception handling (`@ControllerAdvice`, custom exceptions)
-- [ ] Unit tests for the service layer (Mockito) + integration tests for the controller (`MockMvc`)
+- [ ] Centralized exception handling (`@ControllerAdvice`, custom exceptions) — verify error responses never leak stack traces
+- [ ] Unit tests for the service layer (Mockito) + integration tests for the controller (`MockMvc`) — meet the ≥90% coverage bar from the Definition of Done
 
 ### Grow the domain
 - [ ] Pagination & sorting on the `Stock` list endpoint
@@ -201,6 +237,13 @@ infrastructure (not built by us) rather than part of the Spring apps:
 - [ ] Bind `notification-service` (and the NiFi flow) to only the routing keys/classifications they're meant to see — verify a RESTRICTED update never reaches a consumer only bound to `stock.price.public`
 - [ ] (Optional) Use the classification FlowFile attribute in NiFi with `RouteOnAttribute` to branch the flow per label
 
+### Local Developer Experience (VSCode)
+- [ ] `.vscode/tasks.json`: tasks to start/stop local infra (`docker compose up -d` / `docker compose down`) for RabbitMQ + NiFi
+- [ ] `.vscode/launch.json`: a Java launch config per service (`stock-service`, `sector-service`, `notification-service`) plus a compound config to launch all three together
+- [ ] `.vscode/extensions.json`: recommend the Spring Boot Dashboard extension for one-click start/stop/debug across the multi-module workspace
+- [ ] `docs/local-dev.md`: one-page "start everything" guide — exact steps plus a single table of every local URL/port (RabbitMQ mgmt UI, NiFi UI, each service's REST base URL, each H2 console)
+- [ ] End-to-end check: from a clean checkout, follow `docs/local-dev.md` and confirm every UI is reachable and a price update flows all the way through (stock-service → RabbitMQ → NiFi canvas / notification-service)
+
 ### Stretch / later
 - [ ] Actuator (health/info endpoints)
 - [ ] API docs (springdoc-openapi)
@@ -208,6 +251,8 @@ infrastructure (not built by us) rather than part of the Spring apps:
 - [ ] Swap H2 for a real database (e.g. Postgres via Docker Compose)
 - [ ] Optional UI (Thymeleaf or separate frontend)
 - [ ] Service discovery / config server / API gateway (Eureka, Spring Cloud Config, Spring Cloud Gateway) — deliberately out of scope for now; the point of this project is demonstrating sync + async communication between a small number of services, not full microservices infra. Revisit only if that changes.
+- [ ] Static analysis: SpotBugs + find-sec-bugs
+- [ ] OWASP ZAP baseline scan against the running services
 
 ## Current State
 

@@ -15,7 +15,7 @@
         <xsl:value-of select="name"/>
         <xsl:text> (</xsl:text>
         <xsl:value-of select="symbol"/>
-        <xsl:text>) — $</xsl:text>
+        <xsl:text>) — £</xsl:text>
         <xsl:value-of select="price"/>
       </headline>
       <details>
