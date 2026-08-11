@@ -1,0 +1,36 @@
+[
+  { "symbol": "NVTD", "timestamp": "2026-08-11T09:30:00Z", "price": 142.50, "volume": 1200, "classification": "PUBLIC",     "routingKey": "stock.price.public" },
+  { "symbol": "NVTD", "timestamp": "2026-08-11T09:35:00Z", "price": 143.10, "volume": 980,  "classification": "PUBLIC",     "routingKey": "stock.price.public" },
+  { "symbol": "NVTD", "timestamp": "2026-08-11T09:40:00Z", "price": 142.85, "volume": 1100, "classification": "PUBLIC",     "routingKey": "stock.price.public" },
+  { "symbol": "NVTD", "timestamp": "2026-08-11T09:45:00Z", "price": 144.20, "volume": 1550, "classification": "PUBLIC",     "routingKey": "stock.price.public" },
+  { "symbol": "NVTD", "timestamp": "2026-08-11T09:50:00Z", "price": 145.00, "volume": 1330, "classification": "PUBLIC",     "routingKey": "stock.price.public" },
+  { "symbol": "NVTD", "timestamp": "2026-08-11T09:55:00Z", "price": 144.60, "volume": 990,  "classification": "PUBLIC",     "routingKey": "stock.price.public" },
+
+  { "symbol": "BLHE", "timestamp": "2026-08-11T09:30:00Z", "price": 58.20, "volume": 2200, "classification": "PUBLIC",     "routingKey": "stock.price.public" },
+  { "symbol": "BLHE", "timestamp": "2026-08-11T09:35:00Z", "price": 57.95, "volume": 1800, "classification": "PUBLIC",     "routingKey": "stock.price.public" },
+  { "symbol": "BLHE", "timestamp": "2026-08-11T09:40:00Z", "price": 58.40, "volume": 2100, "classification": "PUBLIC",     "routingKey": "stock.price.public" },
+  { "symbol": "BLHE", "timestamp": "2026-08-11T09:45:00Z", "price": 58.75, "volume": 1950, "classification": "PUBLIC",     "routingKey": "stock.price.public" },
+  { "symbol": "BLHE", "timestamp": "2026-08-11T09:50:00Z", "price": 59.10, "volume": 2400, "classification": "PUBLIC",     "routingKey": "stock.price.public" },
+  { "symbol": "BLHE", "timestamp": "2026-08-11T09:55:00Z", "price": 58.90, "volume": 1700, "classification": "PUBLIC",     "routingKey": "stock.price.public" },
+
+  { "symbol": "SLBT", "timestamp": "2026-08-11T09:30:00Z", "price": 21.75, "volume": 500, "classification": "RESTRICTED", "routingKey": "stock.price.restricted" },
+  { "symbol": "SLBT", "timestamp": "2026-08-11T09:35:00Z", "price": 22.10, "volume": 620, "classification": "RESTRICTED", "routingKey": "stock.price.restricted" },
+  { "symbol": "SLBT", "timestamp": "2026-08-11T09:40:00Z", "price": 21.60, "volume": 480, "classification": "RESTRICTED", "routingKey": "stock.price.restricted" },
+  { "symbol": "SLBT", "timestamp": "2026-08-11T09:45:00Z", "price": 21.40, "volume": 710, "classification": "RESTRICTED", "routingKey": "stock.price.restricted" },
+  { "symbol": "SLBT", "timestamp": "2026-08-11T09:50:00Z", "price": 20.95, "volume": 890, "classification": "RESTRICTED", "routingKey": "stock.price.restricted" },
+  { "symbol": "SLBT", "timestamp": "2026-08-11T09:55:00Z", "price": 21.05, "volume": 530, "classification": "RESTRICTED", "routingKey": "stock.price.restricted" },
+
+  { "symbol": "QRDG", "timestamp": "2026-08-11T09:30:00Z", "price": 76.40, "volume": 800,  "classification": "INTERNAL", "routingKey": "stock.price.internal" },
+  { "symbol": "QRDG", "timestamp": "2026-08-11T09:35:00Z", "price": 76.90, "volume": 750,  "classification": "INTERNAL", "routingKey": "stock.price.internal" },
+  { "symbol": "QRDG", "timestamp": "2026-08-11T09:40:00Z", "price": 77.35, "volume": 900,  "classification": "INTERNAL", "routingKey": "stock.price.internal" },
+  { "symbol": "QRDG", "timestamp": "2026-08-11T09:45:00Z", "price": 76.80, "volume": 640,  "classification": "INTERNAL", "routingKey": "stock.price.internal" },
+  { "symbol": "QRDG", "timestamp": "2026-08-11T09:50:00Z", "price": 77.60, "volume": 1020, "classification": "INTERNAL", "routingKey": "stock.price.internal" },
+  { "symbol": "QRDG", "timestamp": "2026-08-11T09:55:00Z", "price": 78.05, "volume": 880,  "classification": "INTERNAL", "routingKey": "stock.price.internal" },
+
+  { "symbol": "EMBR", "timestamp": "2026-08-11T09:30:00Z", "price": 34.10, "volume": 300, "classification": "RESTRICTED", "routingKey": "stock.price.restricted" },
+  { "symbol": "EMBR", "timestamp": "2026-08-11T09:35:00Z", "price": 34.55, "volume": 410, "classification": "RESTRICTED", "routingKey": "stock.price.restricted" },
+  { "symbol": "EMBR", "timestamp": "2026-08-11T09:40:00Z", "price": 35.20, "volume": 560, "classification": "RESTRICTED", "routingKey": "stock.price.restricted" },
+  { "symbol": "EMBR", "timestamp": "2026-08-11T09:45:00Z", "price": 34.90, "volume": 390, "classification": "RESTRICTED", "routingKey": "stock.price.restricted" },
+  { "symbol": "EMBR", "timestamp": "2026-08-11T09:50:00Z", "price": 35.60, "volume": 470, "classification": "RESTRICTED", "routingKey": "stock.price.restricted" },
+  { "symbol": "EMBR", "timestamp": "2026-08-11T09:55:00Z", "price": 36.10, "volume": 610, "classification": "RESTRICTED", "routingKey": "stock.price.restricted" }
+]

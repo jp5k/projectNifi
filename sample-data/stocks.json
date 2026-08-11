@@ -1,0 +1,12 @@
+[
+  { "symbol": "NVTD", "name": "NovaTech Dynamics",     "sector": "Technology",  "classification": "PUBLIC",     "basePrice": 142.50 },
+  { "symbol": "BLHE", "name": "BlueHarbor Energy",      "sector": "Energy",      "classification": "PUBLIC",     "basePrice": 58.20 },
+  { "symbol": "SLBT", "name": "Solace Biotech",         "sector": "Healthcare",  "classification": "RESTRICTED", "basePrice": 21.75 },
+  { "symbol": "QRDG", "name": "Quantum Ridge Systems",  "sector": "Technology",  "classification": "INTERNAL",   "basePrice": 76.40 },
+  { "symbol": "CFHL", "name": "Cascade Freight Holdings","sector": "Industrials","classification": "PUBLIC",     "basePrice": 33.60 },
+  { "symbol": "IRVM", "name": "Ironvale Materials",     "sector": "Materials",   "classification": "PUBLIC",     "basePrice": 47.15 },
+  { "symbol": "HLCM", "name": "Halcyon Media Group",    "sector": "Media",       "classification": "INTERNAL",   "basePrice": 15.90 },
+  { "symbol": "DFTW", "name": "Driftwood Hospitality",  "sector": "Consumer",    "classification": "PUBLIC",     "basePrice": 62.05 },
+  { "symbol": "PNCF", "name": "Pinecrest Financial",    "sector": "Financials",  "classification": "PUBLIC",     "basePrice": 98.30 },
+  { "symbol": "EMBR", "name": "Emberline Robotics",     "sector": "Robotics",    "classification": "RESTRICTED", "basePrice": 34.10 }
+]
