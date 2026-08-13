@@ -191,7 +191,7 @@ apply continuously as each service/feature lands:
 
 ### Foundations
 - [x] Restructure repo into a multi-module Maven build: parent aggregator POM + `stock-service` module holding the existing skeleton code (update README run instructions for the new layout as a follow-up)
-- [ ] Package structure within `stock-service` (`controller`, `service`, `repository`, `model`, `dto`, `exception`, `config`)
+- [x] Package structure within `stock-service` (`controller`, `service`, `repository`, `model`, `dto`, `exception`, `config`)
 - [ ] `Stock` entity + Spring Data JPA repository in `stock-service`
 - [ ] Basic CRUD REST endpoints for `Stock` (entity returned directly, no DTOs yet) — verify via curl/Postman + H2 console
 - [ ] Seed `stock-service` with `sample-data/stocks.json` on startup (e.g. `CommandLineRunner` or `data.sql`)
@@ -264,9 +264,10 @@ apply continuously as each service/feature lands:
   `stock-service` as its only module so far); `stock-service/pom.xml` holds
   the Spring Boot dependencies and plugin. `./mvnw verify` builds the whole
   reactor.
-- No controllers, entities, repositories, or services yet — the moved code is
-  still just the skeleton `ProjectNifiApplication` + one context-loads test,
-  now living under `stock-service/src/`.
+- `stock-service` now has its package structure (`controller`, `service`,
+  `repository`, `model`, `dto`, `exception`, `config`), each with a
+  `package-info.java` explaining its role — but no classes in them yet, still
+  just the skeleton `ProjectNifiApplication` + one context-loads test.
 - `application.properties` (in `stock-service/src/main/resources/`) only sets
   `spring.application.name`.
 - README's run/test instructions still describe the old single-module layout
