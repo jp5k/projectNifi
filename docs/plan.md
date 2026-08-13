@@ -190,7 +190,7 @@ apply continuously as each service/feature lands:
 ## Roadmap checklist
 
 ### Foundations
-- [ ] Restructure repo into a multi-module Maven build: parent aggregator POM + `stock-service` module holding the existing skeleton code (update README run instructions for the new layout as a follow-up)
+- [x] Restructure repo into a multi-module Maven build: parent aggregator POM + `stock-service` module holding the existing skeleton code (update README run instructions for the new layout as a follow-up)
 - [ ] Package structure within `stock-service` (`controller`, `service`, `repository`, `model`, `dto`, `exception`, `config`)
 - [ ] `Stock` entity + Spring Data JPA repository in `stock-service`
 - [ ] Basic CRUD REST endpoints for `Stock` (entity returned directly, no DTOs yet) — verify via curl/Postman + H2 console
@@ -259,9 +259,19 @@ apply continuously as each service/feature lands:
 - Java 21, Spring Boot 3.5.0, Maven.
 - Dependencies: `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `h2` (runtime),
   `spring-boot-starter-test`.
-- No controllers, entities, repositories, or services yet — still a single-module
-  scaffold (multi-module restructuring is the first Foundations item above).
-- `application.properties` only sets `spring.application.name`.
+- Multi-module Maven build in place: root `pom.xml` is a `packaging=pom`
+  parent aggregator (inherits `spring-boot-starter-parent`, declares
+  `stock-service` as its only module so far); `stock-service/pom.xml` holds
+  the Spring Boot dependencies and plugin. `./mvnw verify` builds the whole
+  reactor.
+- No controllers, entities, repositories, or services yet — the moved code is
+  still just the skeleton `ProjectNifiApplication` + one context-loads test,
+  now living under `stock-service/src/`.
+- `application.properties` (in `stock-service/src/main/resources/`) only sets
+  `spring.application.name`.
+- README's run/test instructions still describe the old single-module layout
+  (`./mvnw spring-boot:run` from the root) — updating them for the new
+  `stock-service/` layout is a deliberate follow-up, not yet done.
 - Fictional sample data available in `sample-data/` (`stocks.json`,
   `price-updates.json`) ready to seed/replay once `stock-service` exists.
 - XSLT stylesheet at `nifi/xslt/price-report.xsl` written and verified against
