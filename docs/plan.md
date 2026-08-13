@@ -163,6 +163,9 @@ milestone) for the exact local URLs/ports for everything above.
   change.
 - An item isn't done just because it works — it also has to clear the
   **Definition of Done** below before being ticked off.
+- Do not commit or push automatically when a task completes — leave changes
+  uncommitted so they can be reviewed first. Only commit/push when explicitly
+  asked to.
 
 ## Definition of Done
 
