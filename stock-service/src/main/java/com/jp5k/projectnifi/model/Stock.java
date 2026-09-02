@@ -74,24 +74,12 @@ public class Stock {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public String getSector() {
         return sector;
     }
 
-    public void setSector(String sector) {
-        this.sector = sector;
-    }
-
     public BigDecimal getBasePrice() {
         return basePrice;
-    }
-
-    public void setBasePrice(BigDecimal basePrice) {
-        this.basePrice = basePrice;
     }
 
     /**

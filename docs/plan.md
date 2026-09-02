@@ -200,7 +200,7 @@ apply continuously as each service/feature lands:
 - [x] Seed `stock-service` with `sample-data/stocks.json` on startup (e.g. `CommandLineRunner` or `data.sql`)
 
 ### Cross-cutting: Testing & Security Setup
-- [ ] Add JaCoCo Maven plugin to the parent POM: coverage report + a ≥90% line-coverage check bound to `verify`
+- [x] Add JaCoCo Maven plugin to the parent POM: coverage report + a ≥90% line-coverage check bound to `verify`
 - [ ] Add OWASP Dependency-Check Maven plugin to the parent POM for dependency vulnerability scanning
 - [ ] Confirm `.gitignore`'s existing secret/credential patterns extend cleanly to each module's `application*.properties`
 
@@ -303,8 +303,24 @@ apply continuously as each service/feature lands:
   tests still pass (2/2), and `ProjectNifiApplicationTests`'s full-context
   run logs "Seeded 10 stocks from sample-data/stocks.json". Foundations
   section of the roadmap is now complete.
-- `application.properties` (in `stock-service/src/main/resources/`) only sets
-  `spring.application.name`.
+- JaCoCo (`jacoco-maven-plugin` 0.8.12) is wired into the root `pom.xml`,
+  inherited by every module: `prepare-agent` + a coverage `report` bound to
+  `test`, plus a `check` bound to `verify` enforcing ≥90% line coverage
+  (`*Application.class` and `package-info.class` excluded — boilerplate/no
+  real logic). To clear the bar, added `StockServiceTests` (Mockito),
+  `StockControllerTests` (`@WebMvcTest` + `MockMvc` + `@MockitoBean`), and
+  `StockTests` (equals/hashCode/toString) — these pull forward some of the
+  "Solidify the basics" testing item ahead of schedule (that item stays
+  unticked below since it's bundled with DTOs/validation/exception handling,
+  not done yet; these tests target today's entity-direct controller and will
+  need light rework once DTOs land). Also removed `Stock`'s `setName`/
+  `setSector`/`setBasePrice` — dead code, nothing called them (the controller
+  rebuilds via the constructor on update; Hibernate uses field access, not
+  setters). `./mvnw verify` passes: 20/20 tests, 98% instruction / ~97% line
+  coverage, "All coverage checks have been met."
+- `application.properties` (in `stock-service/src/main/resources/`) sets
+  `spring.application.name`, pins the H2 URL to `jdbc:h2:mem:stockservice`,
+  and enables `spring.h2.console.enabled=true`.
 - README's run/test instructions still describe the old single-module layout
   (`./mvnw spring-boot:run` from the root) — updating them for the new
   `stock-service/` layout is a deliberate follow-up, not yet done.
