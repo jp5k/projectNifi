@@ -36,6 +36,20 @@
 	</dependencies>
 
 	<build>
+		<resources>
+			<resource>
+				<directory>${project.basedir}/src/main/resources</directory>
+			</resource>
+			<resource>
+				<!-- Pull stocks.json onto the classpath from its single source of
+				     truth in sample-data/, rather than duplicating it. -->
+				<directory>${project.basedir}/../sample-data</directory>
+				<targetPath>sample-data</targetPath>
+				<includes>
+					<include>stocks.json</include>
+				</includes>
+			</resource>
+		</resources>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>

@@ -197,7 +197,7 @@ apply continuously as each service/feature lands:
 - [x] Package structure within `stock-service` (`controller`, `service`, `repository`, `model`, `dto`, `exception`, `config`)
 - [x] `Stock` entity + Spring Data JPA repository in `stock-service`
 - [x] Basic CRUD REST endpoints for `Stock` (entity returned directly, no DTOs yet) — verify via curl/Postman + H2 console
-- [ ] Seed `stock-service` with `sample-data/stocks.json` on startup (e.g. `CommandLineRunner` or `data.sql`)
+- [x] Seed `stock-service` with `sample-data/stocks.json` on startup (e.g. `CommandLineRunner` or `data.sql`)
 
 ### Cross-cutting: Testing & Security Setup
 - [ ] Add JaCoCo Maven plugin to the parent POM: coverage report + a ≥90% line-coverage check bound to `verify`
@@ -290,6 +290,19 @@ apply continuously as each service/feature lands:
   Verified by running the app and exercising the full create → read → list →
   update → 404-on-missing → delete → 404-on-redelete cycle with curl, plus
   confirming `/h2-console` is reachable.
+- `stock-service` now seeds itself from `sample-data/stocks.json` on startup
+  (`config/StockDataSeeder.java`, a `CommandLineRunner` bean), skipping the
+  seed if the table already has rows. `stocks.json` is pulled onto the
+  classpath at build time from its single source of truth in `sample-data/`
+  (see the added `<resources>` block in `stock-service/pom.xml`) rather than
+  duplicated under `src/main/resources`. `classification` in the JSON is
+  deliberately ignored for now (`@JsonIgnoreProperties(ignoreUnknown = true)`
+  on the private `StockSeed` record used for deserialization) since `Stock`
+  doesn't model it yet. Verified: all 10 fictional companies appear via
+  `GET /stocks` on a fresh boot, matching `sample-data/stocks.json`; existing
+  tests still pass (2/2), and `ProjectNifiApplicationTests`'s full-context
+  run logs "Seeded 10 stocks from sample-data/stocks.json". Foundations
+  section of the roadmap is now complete.
 - `application.properties` (in `stock-service/src/main/resources/`) only sets
   `spring.application.name`.
 - README's run/test instructions still describe the old single-module layout
