@@ -196,7 +196,7 @@ apply continuously as each service/feature lands:
 - [x] Restructure repo into a multi-module Maven build: parent aggregator POM + `stock-service` module holding the existing skeleton code (update README run instructions for the new layout as a follow-up)
 - [x] Package structure within `stock-service` (`controller`, `service`, `repository`, `model`, `dto`, `exception`, `config`)
 - [x] `Stock` entity + Spring Data JPA repository in `stock-service`
-- [ ] Basic CRUD REST endpoints for `Stock` (entity returned directly, no DTOs yet) — verify via curl/Postman + H2 console
+- [x] Basic CRUD REST endpoints for `Stock` (entity returned directly, no DTOs yet) — verify via curl/Postman + H2 console
 - [ ] Seed `stock-service` with `sample-data/stocks.json` on startup (e.g. `CommandLineRunner` or `data.sql`)
 
 ### Cross-cutting: Testing & Security Setup
@@ -278,6 +278,18 @@ apply continuously as each service/feature lands:
   that's the Data Classification & Access Control milestone. Verified via a
   `@DataJpaTest` (`StockRepositoryTests`) that saves and re-fetches a `Stock`
   by symbol; `./mvnw verify` passes (2/2 tests).
+- Basic CRUD REST endpoints for `Stock` are in place: `StockService`
+  (`service/StockService.java`, thin pass-through to `StockRepository`) and
+  `StockController` (`controller/StockController.java`) exposing
+  `GET /stocks`, `GET /stocks/{symbol}`, `POST /stocks`, `PUT /stocks/{symbol}`,
+  `DELETE /stocks/{symbol}` — entity in/out directly, no DTOs, no input
+  validation, no centralized exception handling yet (all deliberately
+  deferred to later milestones); not-found cases return a plain 404.
+  `application.properties` now pins the H2 URL to `jdbc:h2:mem:stockservice`
+  and enables `spring.h2.console.enabled=true` for local manual verification.
+  Verified by running the app and exercising the full create → read → list →
+  update → 404-on-missing → delete → 404-on-redelete cycle with curl, plus
+  confirming `/h2-console` is reachable.
 - `application.properties` (in `stock-service/src/main/resources/`) only sets
   `spring.application.name`.
 - README's run/test instructions still describe the old single-module layout
