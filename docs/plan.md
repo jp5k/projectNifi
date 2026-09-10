@@ -205,7 +205,7 @@ apply continuously as each service/feature lands:
 - [x] Confirm `.gitignore`'s existing secret/credential patterns extend cleanly to each module's `application*.properties`
 
 ### Solidify the basics
-- [ ] Request/response DTOs + mapping; refactor controller to use them
+- [x] Request/response DTOs + mapping; refactor controller to use them
 - [ ] Input validation (`spring-boot-starter-validation`)
 - [ ] Centralized exception handling (`@ControllerAdvice`, custom exceptions) — verify error responses never leak stack traces
 - [ ] Unit tests for the service layer (Mockito) + integration tests for the controller (`MockMvc`) — meet the ≥90% coverage bar from the Definition of Done
@@ -343,6 +343,22 @@ apply continuously as each service/feature lands:
   intended. Convention documented as a comment in `.gitignore`. Only tracked
   config today is `stock-service`'s `application.properties` (no secrets);
   nothing sensitive is committed anywhere in the tree.
+- `stock-service`'s REST API now speaks in DTOs, not the JPA entity:
+  `dto/StockRequest` (write model — POST/PUT body) and `dto/StockResponse`
+  (read model), both plain records, with `dto/StockMapper` (non-instantiable,
+  static methods) holding the entity<->DTO conversion. `StockController` was
+  refactored to accept `StockRequest` / return `StockResponse` and delegate
+  mapping to `StockMapper`; `StockService` is unchanged and still works in
+  terms of the `Stock` entity (deliberate — leaves it reusable by the future
+  RabbitMQ publisher). `PUT /stocks/{symbol}` now explicitly takes the symbol
+  from the path, ignoring any `symbol` in the body (previously it did the same
+  implicitly). No Bean Validation annotations yet — that's the very next
+  roadmap item. Added `dto/StockMapperTests`; existing controller/service
+  tests needed no behavioural change (response JSON field names are
+  identical). `./mvnw verify` passes: 23/23 tests, ~97% line coverage, "All
+  coverage checks have been met." Also smoke-tested against a running instance
+  (create -> replace-with-mismatched-body-symbol -> 404-on-body-symbol ->
+  delete) — all correct.
 - XSLT stylesheet at `nifi/xslt/price-report.xsl` written and verified against
   `sample-data/price-update.xml` (output matches `sample-data/price-report-example.xml`,
   confirmed via the JDK's built-in XSLT processor) — ready to wire into the NiFi
