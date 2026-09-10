@@ -3,11 +3,12 @@ package com.jp5k.projectnifi.controller;
 import com.jp5k.projectnifi.dto.StockMapper;
 import com.jp5k.projectnifi.dto.StockRequest;
 import com.jp5k.projectnifi.dto.StockResponse;
+import com.jp5k.projectnifi.exception.StockNotFoundException;
 import com.jp5k.projectnifi.model.Stock;
 import com.jp5k.projectnifi.service.StockService;
 import jakarta.validation.Valid;
 import java.util.List;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -26,11 +28,12 @@ import org.springframework.web.bind.annotation.RestController;
  * {@link StockMapper}; this class stays focused on HTTP concerns (routing,
  * status codes).
  *
- * <p>Request bodies are constraint-checked via {@code @Valid} against
- * {@link StockRequest}. Centralized exception handling is still a separate
- * upcoming roadmap item, so a constraint violation surfaces as Spring's
- * default {@code 400} error body rather than a curated one, and not-found
- * cases return a plain 404.
+ * <p>Errors are not handled here. Request bodies are constraint-checked via
+ * {@code @Valid} against {@link StockRequest}, and a missing stock is reported
+ * by throwing {@link StockNotFoundException}; both — plus anything unexpected —
+ * are turned into a consistent {@code application/problem+json} response by
+ * {@code GlobalExceptionHandler}. That lets the methods below read as the
+ * happy path only.
  */
 @RestController
 @RequestMapping("/stocks")
@@ -50,13 +53,16 @@ public class StockController {
                 .toList();
     }
 
-    /** Fetches a single stock by symbol, or 404 if it doesn't exist. */
+    /**
+     * Fetches a single stock by symbol.
+     *
+     * @throws StockNotFoundException if no stock has that symbol (→ 404)
+     */
     @GetMapping("/{symbol}")
-    public ResponseEntity<StockResponse> findBySymbol(@PathVariable String symbol) {
+    public StockResponse findBySymbol(@PathVariable String symbol) {
         return stockService.findBySymbol(symbol)
                 .map(StockMapper::toResponse)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                .orElseThrow(() -> new StockNotFoundException(symbol));
     }
 
     /**
@@ -65,34 +71,45 @@ public class StockController {
      * {@code 400 Bad Request} before this method runs.
      */
     @PostMapping
-    public ResponseEntity<StockResponse> create(@Valid @RequestBody StockRequest request) {
+    @ResponseStatus(HttpStatus.CREATED)
+    public StockResponse create(@Valid @RequestBody StockRequest request) {
         Stock saved = stockService.save(StockMapper.toEntity(request));
-        return ResponseEntity.status(201).body(StockMapper.toResponse(saved));
+        return StockMapper.toResponse(saved);
     }
 
     /**
-     * Fully replaces the stock at {@code symbol} with the request body, or 404
-     * if it doesn't exist yet — this endpoint updates, it doesn't upsert. The
-     * path {@code symbol} is authoritative; any {@code symbol} in the body is
-     * ignored (see {@link StockMapper#toEntity(String, StockRequest)}) but is
-     * still constraint-checked, so the body must carry a non-blank
-     * {@code symbol}. A body that fails validation is rejected with
-     * {@code 400 Bad Request}; the 400 takes precedence over the 404.
+     * Fully replaces the stock at {@code symbol} with the request body — this
+     * endpoint updates, it doesn't upsert. The path {@code symbol} is
+     * authoritative; any {@code symbol} in the body is ignored (see
+     * {@link StockMapper#toEntity(String, StockRequest)}) but is still
+     * constraint-checked, so the body must carry a non-blank {@code symbol}.
+     *
+     * <p>A body that fails validation is a {@code 400}; that check runs before
+     * the existence check, so an invalid body for a missing symbol is still a
+     * 400, not a 404.
+     *
+     * @throws StockNotFoundException if no stock has that symbol (→ 404)
      */
     @PutMapping("/{symbol}")
-    public ResponseEntity<StockResponse> update(
+    public StockResponse update(
             @PathVariable String symbol, @Valid @RequestBody StockRequest request) {
         if (stockService.findBySymbol(symbol).isEmpty()) {
-            return ResponseEntity.notFound().build();
+            throw new StockNotFoundException(symbol);
         }
         Stock updated = stockService.save(StockMapper.toEntity(symbol, request));
-        return ResponseEntity.ok(StockMapper.toResponse(updated));
+        return StockMapper.toResponse(updated);
     }
 
-    /** Deletes the stock at {@code symbol}, or 404 if it doesn't exist. */
+    /**
+     * Deletes the stock at {@code symbol}.
+     *
+     * @throws StockNotFoundException if no stock has that symbol (→ 404)
+     */
     @DeleteMapping("/{symbol}")
-    public ResponseEntity<Void> delete(@PathVariable String symbol) {
-        boolean deleted = stockService.deleteBySymbol(symbol);
-        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable String symbol) {
+        if (!stockService.deleteBySymbol(symbol)) {
+            throw new StockNotFoundException(symbol);
+        }
     }
 }

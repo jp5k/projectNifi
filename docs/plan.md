@@ -207,7 +207,7 @@ apply continuously as each service/feature lands:
 ### Solidify the basics
 - [x] Request/response DTOs + mapping; refactor controller to use them
 - [x] Input validation (`spring-boot-starter-validation`)
-- [ ] Centralized exception handling (`@ControllerAdvice`, custom exceptions) — verify error responses never leak stack traces
+- [x] Centralized exception handling (`@ControllerAdvice`, custom exceptions) — verify error responses never leak stack traces
 - [ ] Unit tests for the service layer (Mockito) + integration tests for the controller (`MockMvc`) — meet the ≥90% coverage bar from the Definition of Done
 
 ### Grow the domain
@@ -373,6 +373,26 @@ apply continuously as each service/feature lands:
   28/28 tests, coverage gate still met. Smoke-tested against a running
   instance — blank name, missing/zero/negative `basePrice`, and missing
   `symbol` all return 400; a valid create still returns 201.
+- Centralized exception handling is in. `exception/StockNotFoundException`
+  (unchecked) is thrown by the controller instead of hand-built 404s;
+  `exception/GlobalExceptionHandler` (`@RestControllerAdvice` extending
+  `ResponseEntityExceptionHandler`) turns everything into RFC 9457
+  `application/problem+json` `ProblemDetail` responses: 404 for
+  `StockNotFoundException` (symbol echoed in `detail` — safe, it's the client's
+  own input), 400 for `@Valid` failures with a per-field `errors` map, 400 for
+  unreadable JSON / bad params (inherited from the base class), and a catch-all
+  `@ExceptionHandler(Exception.class)` that logs the real exception at ERROR
+  server-side but returns only a fixed generic 500 message — no stack trace,
+  class name, or internal string ever reaches the client. `StockController`
+  was simplified accordingly (no more `ResponseEntity`; `@ResponseStatus` for
+  201/204, plain DTO returns otherwise). `application.properties` also pins
+  `server.error.include-stacktrace/message/binding-errors=never` and
+  `include-exception=false` (all already the Boot defaults) to lock down the
+  fallback `/error` path too. `./mvnw verify` passes: 30/30 tests, ~98% line
+  coverage (`GlobalExceptionHandler` 19/19, `StockController` 18/18). Verified
+  on a running instance: 404, validation 400 (with `errors` map), malformed-
+  JSON 400, and a forced service exception all return `problem+json` with no
+  leaked detail; happy path unchanged.
 - XSLT stylesheet at `nifi/xslt/price-report.xsl` written and verified against
   `sample-data/price-update.xml` (output matches `sample-data/price-report-example.xml`,
   confirmed via the JDK's built-in XSLT processor) — ready to wire into the NiFi

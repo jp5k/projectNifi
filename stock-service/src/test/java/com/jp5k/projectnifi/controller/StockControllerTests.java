@@ -1,5 +1,7 @@
 package com.jp5k.projectnifi.controller;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -60,10 +62,18 @@ class StockControllerTests {
     }
 
     @Test
-    void findBySymbolReturns404WhenMissing() throws Exception {
+    void findBySymbolReturns404ProblemDetailWhenMissing() throws Exception {
         when(stockService.findBySymbol("UNKNOWN")).thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/stocks/UNKNOWN")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/stocks/UNKNOWN"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType("application/problem+json"))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.title").value("Stock not found"))
+                .andExpect(jsonPath("$.detail").value("No stock found with symbol 'UNKNOWN'"))
+                .andExpect(jsonPath("$.trace").doesNotExist())
+                .andExpect(jsonPath("$.stackTrace").doesNotExist())
+                .andExpect(jsonPath("$.exception").doesNotExist());
     }
 
     @Test
@@ -104,7 +114,9 @@ class StockControllerTests {
                         .content("""
                                 {"symbol":"UNKNOWN","name":"Doesn't matter","sector":"Technology","basePrice":1.00}
                                 """))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType("application/problem+json"))
+                .andExpect(jsonPath("$.detail").value("No stock found with symbol 'UNKNOWN'"));
     }
 
     @Test
@@ -119,17 +131,25 @@ class StockControllerTests {
     void deleteReturns404WhenMissing() throws Exception {
         when(stockService.deleteBySymbol("UNKNOWN")).thenReturn(false);
 
-        mockMvc.perform(delete("/stocks/UNKNOWN")).andExpect(status().isNotFound());
+        mockMvc.perform(delete("/stocks/UNKNOWN"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType("application/problem+json"))
+                .andExpect(jsonPath("$.detail").value("No stock found with symbol 'UNKNOWN'"));
     }
 
     @Test
-    void createReturns400WhenNameIsBlank() throws Exception {
+    void createReturns400ProblemDetailWithPerFieldErrorsWhenNameIsBlank() throws Exception {
         mockMvc.perform(post("/stocks")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"symbol":"NVTD","name":"  ","sector":"Technology","basePrice":142.50}
                                 """))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType("application/problem+json"))
+                .andExpect(jsonPath("$.title").value("Validation failed"))
+                .andExpect(jsonPath("$.errors.name").value("must not be blank"))
+                .andExpect(jsonPath("$.trace").doesNotExist())
+                .andExpect(jsonPath("$.stackTrace").doesNotExist());
 
         verifyNoInteractions(stockService);
     }
@@ -177,6 +197,33 @@ class StockControllerTests {
                         .content("""
                                 {"symbol":"NVTD","name":"NovaTech Dynamics","sector":"Technology","basePrice":-5}
                                 """))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(stockService);
+    }
+
+    @Test
+    void unexpectedServiceExceptionBecomesGeneric500WithNoLeakedDetail() throws Exception {
+        when(stockService.findAll())
+                .thenThrow(new IllegalStateException("H2 connection pool exhausted at com.example.Secret"));
+
+        mockMvc.perform(get("/stocks"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().contentType("application/problem+json"))
+                .andExpect(jsonPath("$.title").value("Internal server error"))
+                .andExpect(jsonPath("$.detail").value("An unexpected error occurred. Please try again later."))
+                .andExpect(jsonPath("$.trace").doesNotExist())
+                .andExpect(jsonPath("$.stackTrace").doesNotExist())
+                .andExpect(jsonPath("$.exception").doesNotExist())
+                // the underlying message must not appear anywhere in the body
+                .andExpect(content().string(not(containsString("H2 connection pool"))));
+    }
+
+    @Test
+    void malformedJsonBodyBecomes400NotAServerError() throws Exception {
+        mockMvc.perform(post("/stocks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{ not json "))
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(stockService);
