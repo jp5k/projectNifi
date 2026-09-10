@@ -208,7 +208,7 @@ apply continuously as each service/feature lands:
 - [x] Request/response DTOs + mapping; refactor controller to use them
 - [x] Input validation (`spring-boot-starter-validation`)
 - [x] Centralized exception handling (`@ControllerAdvice`, custom exceptions) — verify error responses never leak stack traces
-- [ ] Unit tests for the service layer (Mockito) + integration tests for the controller (`MockMvc`) — meet the ≥90% coverage bar from the Definition of Done
+- [x] Unit tests for the service layer (Mockito) + integration tests for the controller (`MockMvc`) — meet the ≥90% coverage bar from the Definition of Done
 
 ### Grow the domain
 - [ ] Pagination & sorting on the `Stock` list endpoint
@@ -393,6 +393,16 @@ apply continuously as each service/feature lands:
   on a running instance: 404, validation 400 (with `errors` map), malformed-
   JSON 400, and a forced service exception all return `problem+json` with no
   leaked detail; happy path unchanged.
+- Test suite for the "Solidify the basics" testing item is complete: service
+  layer covered by `StockServiceTests` (Mockito, `@Mock StockRepository`),
+  controller by `StockControllerTests` (`@WebMvcTest` + `MockMvc` +
+  `@MockitoBean`, 15 cases spanning happy path, 404, validation 400, malformed
+  JSON, and a forced-500), mapper by `StockMapperTests`, entity identity by
+  `StockTests`, repository by `StockRepositoryTests` (`@DataJpaTest`). Added
+  `StockDataSeederTests` (Mockito) covering both the seed-on-empty and
+  skip-when-populated branches, which were previously only hit via the
+  full-context `ProjectNifiApplicationTests`. `./mvnw verify`: 32/32 tests,
+  **100% line coverage** (90/90), every class fully covered; JaCoCo gate green.
 - XSLT stylesheet at `nifi/xslt/price-report.xsl` written and verified against
   `sample-data/price-update.xml` (output matches `sample-data/price-report-example.xml`,
   confirmed via the JDK's built-in XSLT processor) — ready to wire into the NiFi
