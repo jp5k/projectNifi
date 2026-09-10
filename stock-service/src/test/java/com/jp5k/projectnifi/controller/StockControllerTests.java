@@ -3,6 +3,7 @@ package com.jp5k.projectnifi.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -88,7 +89,7 @@ class StockControllerTests {
         mockMvc.perform(put("/stocks/NVTD")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name":"NovaTech Dynamics Inc.","sector":"Technology","basePrice":150.00}
+                                {"symbol":"NVTD","name":"NovaTech Dynamics Inc.","sector":"Technology","basePrice":150.00}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("NovaTech Dynamics Inc."));
@@ -101,7 +102,7 @@ class StockControllerTests {
         mockMvc.perform(put("/stocks/UNKNOWN")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name":"Doesn't matter","sector":"Technology","basePrice":1.00}
+                                {"symbol":"UNKNOWN","name":"Doesn't matter","sector":"Technology","basePrice":1.00}
                                 """))
                 .andExpect(status().isNotFound());
     }
@@ -119,5 +120,65 @@ class StockControllerTests {
         when(stockService.deleteBySymbol("UNKNOWN")).thenReturn(false);
 
         mockMvc.perform(delete("/stocks/UNKNOWN")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void createReturns400WhenNameIsBlank() throws Exception {
+        mockMvc.perform(post("/stocks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"symbol":"NVTD","name":"  ","sector":"Technology","basePrice":142.50}
+                                """))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(stockService);
+    }
+
+    @Test
+    void createReturns400WhenSymbolIsMissing() throws Exception {
+        mockMvc.perform(post("/stocks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"NovaTech Dynamics","sector":"Technology","basePrice":142.50}
+                                """))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(stockService);
+    }
+
+    @Test
+    void createReturns400WhenBasePriceIsMissing() throws Exception {
+        mockMvc.perform(post("/stocks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"symbol":"NVTD","name":"NovaTech Dynamics","sector":"Technology"}
+                                """))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(stockService);
+    }
+
+    @Test
+    void createReturns400WhenBasePriceIsNotPositive() throws Exception {
+        mockMvc.perform(post("/stocks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"symbol":"NVTD","name":"NovaTech Dynamics","sector":"Technology","basePrice":0}
+                                """))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(stockService);
+    }
+
+    @Test
+    void updateReturns400OnInvalidBodyWithoutCheckingExistence() throws Exception {
+        mockMvc.perform(put("/stocks/NVTD")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"symbol":"NVTD","name":"NovaTech Dynamics","sector":"Technology","basePrice":-5}
+                                """))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(stockService);
     }
 }

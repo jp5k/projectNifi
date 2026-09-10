@@ -206,7 +206,7 @@ apply continuously as each service/feature lands:
 
 ### Solidify the basics
 - [x] Request/response DTOs + mapping; refactor controller to use them
-- [ ] Input validation (`spring-boot-starter-validation`)
+- [x] Input validation (`spring-boot-starter-validation`)
 - [ ] Centralized exception handling (`@ControllerAdvice`, custom exceptions) — verify error responses never leak stack traces
 - [ ] Unit tests for the service layer (Mockito) + integration tests for the controller (`MockMvc`) — meet the ≥90% coverage bar from the Definition of Done
 
@@ -359,6 +359,20 @@ apply continuously as each service/feature lands:
   coverage checks have been met." Also smoke-tested against a running instance
   (create -> replace-with-mismatched-body-symbol -> 404-on-body-symbol ->
   delete) — all correct.
+- Input validation is in: `spring-boot-starter-validation` added to
+  `stock-service/pom.xml`; `dto/StockRequest` now carries Jakarta Bean
+  Validation constraints (`@NotBlank` on `symbol`/`name`/`sector`,
+  `@NotNull @Positive` on `basePrice` — deliberately light for a fictional-data
+  project), and `StockController#create` / `#update` mark the `@RequestBody`
+  `@Valid`. A violation returns Spring's default `400` for now — the curated
+  error body is the next roadmap item ("Centralized exception handling").
+  `@Valid` on `update` runs before the existence check, so an invalid body is
+  a 400 even for a missing symbol (400 precedes 404). Two existing PUT tests
+  updated to send a `symbol` in the body (now required); added 5
+  `StockControllerTests` cases for the 400 paths. `./mvnw verify` passes:
+  28/28 tests, coverage gate still met. Smoke-tested against a running
+  instance — blank name, missing/zero/negative `basePrice`, and missing
+  `symbol` all return 400; a valid create still returns 201.
 - XSLT stylesheet at `nifi/xslt/price-report.xsl` written and verified against
   `sample-data/price-update.xml` (output matches `sample-data/price-report-example.xml`,
   confirmed via the JDK's built-in XSLT processor) — ready to wire into the NiFi
