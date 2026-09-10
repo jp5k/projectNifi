@@ -201,8 +201,8 @@ apply continuously as each service/feature lands:
 
 ### Cross-cutting: Testing & Security Setup
 - [x] Add JaCoCo Maven plugin to the parent POM: coverage report + a ≥90% line-coverage check bound to `verify`
-- [ ] Add OWASP Dependency-Check Maven plugin to the parent POM for dependency vulnerability scanning
-- [ ] Confirm `.gitignore`'s existing secret/credential patterns extend cleanly to each module's `application*.properties`
+- [x] Add OWASP Dependency-Check Maven plugin to the parent POM for dependency vulnerability scanning
+- [x] Confirm `.gitignore`'s existing secret/credential patterns extend cleanly to each module's `application*.properties`
 
 ### Solidify the basics
 - [ ] Request/response DTOs + mapping; refactor controller to use them
@@ -326,6 +326,23 @@ apply continuously as each service/feature lands:
   `stock-service/` layout is a deliberate follow-up, not yet done.
 - Fictional sample data available in `sample-data/` (`stocks.json`,
   `price-updates.json`) ready to seed/replay once `stock-service` exists.
+- OWASP Dependency-Check (`dependency-check-maven` 12.2.2) is wired into the
+  root `pom.xml` under a dedicated `security` profile — deliberately *not* bound
+  into the default `verify` lifecycle (the NVD API call is slow/rate-limited
+  without a key, would make routine builds flaky). Run on demand with
+  `./mvnw verify -Psecurity`; reads an `NVD_API_KEY` env var for fast scans.
+  Version pinned below 13.0.0 to avoid a regression that hard-fails when no key
+  is set. Scan run successfully with a real NVD API key.
+- Secret-hygiene convention confirmed for the multi-module layout: the root
+  `.gitignore` `### Secrets ###` patterns are all path-agnostic (no leading
+  `/`), so `git check-ignore` confirms they catch
+  `application-local.*` / `application-secrets.*`, `.env`, `*.key`, `*.jks`,
+  `*credentials*.json` etc. under *any* module's `src/main/resources` (verified
+  against hypothetical `sector-service`/`notification-service` paths). Plain
+  `application.properties` / `application-<env>.properties` stay tracked as
+  intended. Convention documented as a comment in `.gitignore`. Only tracked
+  config today is `stock-service`'s `application.properties` (no secrets);
+  nothing sensitive is committed anywhere in the tree.
 - XSLT stylesheet at `nifi/xslt/price-report.xsl` written and verified against
   `sample-data/price-update.xml` (output matches `sample-data/price-report-example.xml`,
   confirmed via the JDK's built-in XSLT processor) — ready to wire into the NiFi

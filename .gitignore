@@ -33,6 +33,11 @@ build/
 .vscode/
 
 ### Secrets ###
+# Convention (all modules): committed config lives in application.properties
+# and application-<env>.properties (no secrets in these — env vars only).
+# Anything holding a secret goes in an application-local.* / application-secrets.*
+# file or a .env file, all of which are ignored below. Patterns are path-agnostic
+# (no leading /), so they apply to every module's src/main/resources equally.
 .env
 .env.*
 *.pem
