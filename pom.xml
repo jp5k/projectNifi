@@ -94,4 +94,47 @@
 		</plugins>
 	</build>
 
+	<profiles>
+		<profile>
+			<!-- Dependency vulnerability scanning, per the Definition of Done in
+			     docs/plan.md. Deliberately NOT bound into the default `verify`
+			     lifecycle like JaCoCo: since dependency-check-maven 9.x it calls
+			     the NVD API, which is slow (or rate-limited) without a free API
+			     key, so making it part of every build would make routine
+			     `./mvnw verify` runs slow/flaky and dependent on network access.
+			     Run it deliberately instead: `./mvnw verify -Psecurity`. Get a
+			     free key at https://nvd.nist.gov/developers/request-an-api-key
+			     and `export NVD_API_KEY=...` locally to make scans fast; without
+			     it the plugin still works, just much slower on first run (data
+			     is then cached locally for 4 hours by default). -->
+			<id>security</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.owasp</groupId>
+						<artifactId>dependency-check-maven</artifactId>
+						<!-- Pinned below latest (13.0.0): that release shipped a
+						     regression (dependency-check/DependencyCheck#8715) that
+						     hard-fails with "Invalid API Key, length of 0" when no
+						     NVD_API_KEY is set, instead of just running slower.
+						     Fixed in the repo but not yet in a published release as
+						     of 2026-09; revisit once a later release includes the
+						     fix. -->
+						<version>12.2.2</version>
+						<configuration>
+							<nvdApiKeyEnvironmentVariable>NVD_API_KEY</nvdApiKeyEnvironmentVariable>
+						</configuration>
+						<executions>
+							<execution>
+								<goals>
+									<goal>check</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
 </project>
