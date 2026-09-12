@@ -34,6 +34,7 @@
 
 	<modules>
 		<module>stock-service</module>
+		<module>sector-service</module>
 	</modules>
 
 	<build>

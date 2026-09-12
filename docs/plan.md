@@ -214,7 +214,7 @@ apply continuously as each service/feature lands:
 - [x] Pagination & sorting on the `Stock` list endpoint
 
 ### Microservices: Sector Service
-- [ ] Scaffold `sector-service` module (own Spring Boot app, port :8082, own H2 instance)
+- [x] Scaffold `sector-service` module (own Spring Boot app, port :8082, own H2 instance)
 - [ ] `Sector` entity + repository + basic CRUD REST endpoints in `sector-service`
 - [ ] `stock-service` calls `sector-service` synchronously (Spring `RestClient`) when a Stock references a sector — validate it exists
 - [ ] Verify end-to-end: create a Sector via `sector-service`, then create a Stock in `stock-service` referencing it, confirm the cross-service call works
@@ -424,6 +424,30 @@ apply continuously as each service/feature lands:
   returns all 10 seeded stocks sorted by symbol under `page.size=20`;
   `?page=1&size=3&sort=basePrice,desc` returns the correct 3-item slice in
   descending price order with `page.totalPages=4`.
+- `sector-service` scaffolded as a new sibling Maven module (registered in
+  the root `pom.xml`'s `<modules>`), mirroring `stock-service`'s shape:
+  `spring-boot-starter-data-jpa` + `spring-boot-starter-web` + `h2` (runtime)
+  + `spring-boot-starter-test`, the `spring-boot-maven-plugin`, and the same
+  package skeleton (`controller`, `service`, `repository`, `model`, `dto`,
+  `exception`, `config`), each with a `package-info.java`. Unlike
+  `stock-service` (whose classes live directly under `com.jp5k.projectnifi`,
+  a holdover from before the multi-module split), `sector-service`'s classes
+  live under `com.jp5k.projectnifi.sectorservice` — its own subpackage, so
+  future modules don't collide on class names sharing the bare
+  `com.jp5k.projectnifi` package. Entry point is `SectorServiceApplication`.
+  `application.properties` pins `server.port=8082` and
+  `spring.datasource.url=jdbc:h2:mem:sectorservice` (distinct from
+  `stock-service`'s `:8081` / `stockservice`), enables the H2 console, and
+  mirrors `stock-service`'s `server.error.include-*=never/false` hardening.
+  No `Sector` entity/repository/endpoints yet — that's the next roadmap item;
+  this step is scaffolding only, verified by a `SectorServiceApplicationTests`
+  context-load test. `./mvnw clean verify` passes for the whole reactor
+  (`sector-service`'s JaCoCo bundle currently has 0 coverable classes — only
+  the excluded `*Application.class`/`package-info.class` exist so far — so
+  the ≥90% gate trivially holds). Smoke-tested by running `stock-service` and
+  `sector-service` side by side: both start without port or in-memory-DB
+  collisions, `stock-service` still serves `GET /stocks` normally, and
+  `sector-service` serves its own `/h2-console` on `:8082`.
 
 ## How to update this plan
 
