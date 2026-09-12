@@ -2,8 +2,9 @@ package com.jp5k.projectnifi.service;
 
 import com.jp5k.projectnifi.model.Stock;
 import com.jp5k.projectnifi.repository.StockRepository;
-import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 /**
@@ -26,9 +27,13 @@ public class StockService {
         this.stockRepository = stockRepository;
     }
 
-    /** Returns every {@link Stock}, in no particular order. */
-    public List<Stock> findAll() {
-        return stockRepository.findAll();
+    /**
+     * Returns one page of {@link Stock}, ordered and sliced as described by
+     * {@code pageable} — the controller is responsible for supplying sensible
+     * defaults (page size, sort) from the incoming request.
+     */
+    public Page<Stock> findAll(Pageable pageable) {
+        return stockRepository.findAll(pageable);
     }
 
     /** Returns the {@link Stock} with the given symbol, if it exists. */

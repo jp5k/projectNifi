@@ -211,7 +211,7 @@ apply continuously as each service/feature lands:
 - [x] Unit tests for the service layer (Mockito) + integration tests for the controller (`MockMvc`) — meet the ≥90% coverage bar from the Definition of Done
 
 ### Grow the domain
-- [ ] Pagination & sorting on the `Stock` list endpoint
+- [x] Pagination & sorting on the `Stock` list endpoint
 
 ### Microservices: Sector Service
 - [ ] Scaffold `sector-service` module (own Spring Boot app, port :8082, own H2 instance)
@@ -407,6 +407,23 @@ apply continuously as each service/feature lands:
   `sample-data/price-update.xml` (output matches `sample-data/price-report-example.xml`,
   confirmed via the JDK's built-in XSLT processor) — ready to wire into the NiFi
   flow once that milestone starts.
+- `GET /stocks` now paginates and sorts instead of returning every row.
+  `StockService#findAll` takes a `Pageable` and delegates to
+  `StockRepository#findAll(Pageable)` (already provided by `JpaRepository`,
+  no repository change needed), returning `Page<Stock>`.
+  `StockController#findAll` binds `Pageable` from the standard Spring Data
+  `page`/`size`/`sort` query params via `@PageableDefault(size = 20, sort =
+  "symbol")`, maps to `Page<StockResponse>`, and wraps it in
+  `org.springframework.data.web.PagedModel` (avoids the "don't expose Page
+  directly" warning Spring Boot 3.5 logs otherwise) — response shape is now
+  `{"content": [...], "page": {"size", "number", "totalElements",
+  "totalPages"}}`. Updated `StockServiceTests` and `StockControllerTests`
+  (added a case asserting `page`/`size`/`sort` query params reach the service
+  as the expected `Pageable`). `./mvnw verify` passes: 33/33 tests, coverage
+  gate still met. Smoke-tested against a running instance: default request
+  returns all 10 seeded stocks sorted by symbol under `page.size=20`;
+  `?page=1&size=3&sort=basePrice,desc` returns the correct 3-item slice in
+  descending price order with `page.totalPages=4`.
 
 ## How to update this plan
 

@@ -3,6 +3,7 @@ package com.jp5k.projectnifi.controller;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -23,6 +24,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -44,12 +47,27 @@ class StockControllerTests {
     private final Stock stock = new Stock("NVTD", "NovaTech Dynamics", "Technology", new BigDecimal("142.50"));
 
     @Test
-    void findAllReturnsEveryStock() throws Exception {
-        when(stockService.findAll()).thenReturn(List.of(stock));
+    void findAllReturnsAPageOfStocks() throws Exception {
+        when(stockService.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(stock)));
 
         mockMvc.perform(get("/stocks"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].symbol").value("NVTD"));
+                .andExpect(jsonPath("$.content[0].symbol").value("NVTD"))
+                .andExpect(jsonPath("$.page.totalElements").value(1));
+    }
+
+    @Test
+    void findAllPassesPageSizeAndSortQueryParamsThrough() throws Exception {
+        when(stockService.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(stock)));
+
+        mockMvc.perform(get("/stocks?page=2&size=5&sort=basePrice,desc"))
+                .andExpect(status().isOk());
+
+        verify(stockService)
+                .findAll(argThat(pageable -> pageable.getPageNumber() == 2
+                        && pageable.getPageSize() == 5
+                        && pageable.getSort().getOrderFor("basePrice") != null
+                        && pageable.getSort().getOrderFor("basePrice").isDescending()));
     }
 
     @Test
@@ -204,7 +222,7 @@ class StockControllerTests {
 
     @Test
     void unexpectedServiceExceptionBecomesGeneric500WithNoLeakedDetail() throws Exception {
-        when(stockService.findAll())
+        when(stockService.findAll(any(Pageable.class)))
                 .thenThrow(new IllegalStateException("H2 connection pool exhausted at com.example.Secret"));
 
         mockMvc.perform(get("/stocks"))

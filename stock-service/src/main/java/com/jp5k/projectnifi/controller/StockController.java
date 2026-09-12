@@ -7,7 +7,9 @@ import com.jp5k.projectnifi.exception.StockNotFoundException;
 import com.jp5k.projectnifi.model.Stock;
 import com.jp5k.projectnifi.service.StockService;
 import jakarta.validation.Valid;
-import java.util.List;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PagedModel;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,12 +47,16 @@ public class StockController {
         this.stockService = stockService;
     }
 
-    /** Lists every stock. */
+    /**
+     * Lists stocks, one page at a time. Accepts the standard Spring Data
+     * {@code page}/{@code size}/{@code sort} query parameters (e.g.
+     * {@code ?page=1&size=5&sort=basePrice,desc}); defaults to page 0, size
+     * 20, sorted by {@code symbol} ascending when the caller doesn't specify.
+     */
     @GetMapping
-    public List<StockResponse> findAll() {
-        return stockService.findAll().stream()
-                .map(StockMapper::toResponse)
-                .toList();
+    public PagedModel<StockResponse> findAll(
+            @PageableDefault(size = 20, sort = "symbol") Pageable pageable) {
+        return new PagedModel<>(stockService.findAll(pageable).map(StockMapper::toResponse));
     }
 
     /**

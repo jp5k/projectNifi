@@ -14,6 +14,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 /**
  * Unit tests for {@link StockService}, with {@link StockRepository} mocked.
@@ -34,10 +37,11 @@ class StockServiceTests {
     }
 
     @Test
-    void findAllReturnsEveryStock() {
-        when(stockRepository.findAll()).thenReturn(List.of(stock));
+    void findAllReturnsThePageFromTheRepository() {
+        Pageable pageable = PageRequest.of(0, 20);
+        when(stockRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(stock)));
 
-        assertThat(stockService.findAll()).containsExactly(stock);
+        assertThat(stockService.findAll(pageable)).containsExactly(stock);
     }
 
     @Test
