@@ -215,7 +215,7 @@ apply continuously as each service/feature lands:
 
 ### Microservices: Sector Service
 - [x] Scaffold `sector-service` module (own Spring Boot app, port :8082, own H2 instance)
-- [ ] `Sector` entity + repository + basic CRUD REST endpoints in `sector-service`
+- [x] `Sector` entity + repository + basic CRUD REST endpoints in `sector-service`
 - [ ] `stock-service` calls `sector-service` synchronously (Spring `RestClient`) when a Stock references a sector — validate it exists
 - [ ] Verify end-to-end: create a Sector via `sector-service`, then create a Stock in `stock-service` referencing it, confirm the cross-service call works
 
@@ -448,6 +448,33 @@ apply continuously as each service/feature lands:
   `sector-service` side by side: both start without port or in-memory-DB
   collisions, `stock-service` still serves `GET /stocks` normally, and
   `sector-service` serves its own `/h2-console` on `:8082`.
+- `sector-service` now has a full `Sector` entity + repository + basic CRUD
+  REST endpoints, mirroring `stock-service`'s shape end-to-end: `model/Sector`
+  (JPA entity, `name` as the `@Id` — a natural key, same choice as `Stock#symbol`
+  — plus an optional nullable `description`, added purely so `PUT` has
+  something meaningful to change), `repository/SectorRepository` (plain
+  `JpaRepository<Sector, String>`), `dto/SectorRequest`
+  (`@NotBlank name`, unconstrained `description`) / `dto/SectorResponse` /
+  `dto/SectorMapper`, `exception/SectorNotFoundException` +
+  `exception/GlobalExceptionHandler` (identical `ProblemDetail` shape/rationale
+  to `stock-service`'s), `service/SectorService` (thin pass-through,
+  `findAll`/`findByName`/`save`/`deleteByName` — no pagination, unlike
+  `stock-service`'s `Stock` list endpoint, since that was a separate
+  later-added roadmap item and sector data is small/fixed), and
+  `controller/SectorController` exposing `GET /sectors`, `GET /sectors/{name}`,
+  `POST /sectors`, `PUT /sectors/{name}`, `DELETE /sectors/{name}` — the
+  `GET /sectors/{name}` endpoint is what `stock-service` will call
+  synchronously in the next roadmap item. Added `spring-boot-starter-validation`
+  to `sector-service/pom.xml` (was missing until now). Full test suite added,
+  mirroring `stock-service`'s: `SectorTests` (identity), `SectorRepositoryTests`
+  (`@DataJpaTest`), `SectorMapperTests`, `SectorServiceTests` (Mockito), and
+  `SectorControllerTests` (`@WebMvcTest` + `MockMvc`, 14 cases spanning happy
+  path, 404, validation 400, malformed JSON, and a forced 500). `./mvnw clean
+  verify` passes for the whole reactor: 62 tests total (33 `stock-service` +
+  29 `sector-service`), both modules clear the ≥90% JaCoCo line-coverage gate.
+  Smoke-tested against a running instance: full create → list → get → update →
+  404-on-missing → 400-on-blank-name → delete → 404-on-redelete cycle via curl,
+  all correct, including a create with no `description` (nullable, accepted).
 
 ## How to update this plan
 
