@@ -1,13 +1,15 @@
 # projectNifi
 
-Java Spring Boot project.
+Java Spring Boot project. See [`docs/plan.md`](docs/plan.md) for the roadmap
+and architecture, and [`docs/how-it-works.md`](docs/how-it-works.md) for a
+plain-English walkthrough.
 
 ## Stack
 
 - Java 21
 - Spring Boot 3.5.0
-- Maven
-- Spring Web, Spring Data JPA, H2 (in-memory database)
+- Maven (multi-module: root `pom.xml` is a `packaging=pom` parent aggregator)
+- Spring Web, Spring Data JPA, Bean Validation, H2 (in-memory database)
 
 ## Prerequisites
 
@@ -15,14 +17,30 @@ Java Spring Boot project.
 
 ## Running
 
+Run a single module (from the repo root):
+
 ```bash
-./mvnw spring-boot:run
+./mvnw -pl stock-service spring-boot:run
 ```
+
+`stock-service` listens on **:8081** (`http://localhost:8081/stocks`, H2
+console at `/h2-console`). As more modules land (`sector-service` :8082,
+`notification-service` :8083) run each the same way, module name substituted.
 
 ## Testing
 
+Runs every module in the reactor build, including the JaCoCo coverage check
+bound to `verify`:
+
 ```bash
-./mvnw test
+./mvnw verify
+```
+
+Dependency vulnerability scanning (OWASP Dependency-Check) is opt-in, not part
+of `verify` — see the `security` profile comment in the root `pom.xml`:
+
+```bash
+./mvnw verify -Psecurity
 ```
 
 ## Features
