@@ -58,6 +58,19 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     /**
+     * Maps a Stock referencing a sector {@code sector-service} doesn't
+     * recognize to {@code 400 Bad Request}. The exception message names the
+     * sector and is safe to echo back (it contains only the value the client
+     * supplied), so it goes in {@code detail}.
+     */
+    @ExceptionHandler(UnknownSectorException.class)
+    public ProblemDetail handleUnknownSector(UnknownSectorException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        problem.setTitle("Unknown sector");
+        return problem;
+    }
+
+    /**
      * Last line of defence: anything not handled more specifically becomes a
      * generic {@code 500}. The real exception is logged at ERROR (with its
      * stack trace, server-side only); the client just gets a fixed, detail-free

@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.jp5k.projectnifi.exception.UnknownSectorException;
 import com.jp5k.projectnifi.model.Stock;
 import com.jp5k.projectnifi.service.StockService;
 import java.math.BigDecimal;
@@ -206,6 +207,21 @@ class StockControllerTests {
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(stockService);
+    }
+
+    @Test
+    void createReturns400ProblemDetailWhenSectorIsUnknown() throws Exception {
+        when(stockService.save(any(Stock.class))).thenThrow(new UnknownSectorException("Nonexistent"));
+
+        mockMvc.perform(post("/stocks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"symbol":"NVTD","name":"NovaTech Dynamics","sector":"Nonexistent","basePrice":142.50}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType("application/problem+json"))
+                .andExpect(jsonPath("$.title").value("Unknown sector"))
+                .andExpect(jsonPath("$.detail").value("No sector found with name 'Nonexistent'"));
     }
 
     @Test

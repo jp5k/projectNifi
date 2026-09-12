@@ -216,8 +216,8 @@ apply continuously as each service/feature lands:
 ### Microservices: Sector Service
 - [x] Scaffold `sector-service` module (own Spring Boot app, port :8082, own H2 instance)
 - [x] `Sector` entity + repository + basic CRUD REST endpoints in `sector-service`
-- [ ] `stock-service` calls `sector-service` synchronously (Spring `RestClient`) when a Stock references a sector — validate it exists
-- [ ] Verify end-to-end: create a Sector via `sector-service`, then create a Stock in `stock-service` referencing it, confirm the cross-service call works
+- [x] `stock-service` calls `sector-service` synchronously (Spring `RestClient`) when a Stock references a sector — validate it exists
+- [x] Verify end-to-end: create a Sector via `sector-service`, then create a Stock in `stock-service` referencing it, confirm the cross-service call works
 
 ### Messaging & Dataflow (RabbitMQ + NiFi)
 - [ ] `docker-compose.yml` running RabbitMQ (`rabbitmq:management`, UI on :15672) and Apache NiFi (`apache/nifi`, UI on :8443 or :8080) locally
@@ -475,6 +475,35 @@ apply continuously as each service/feature lands:
   Smoke-tested against a running instance: full create → list → get → update →
   404-on-missing → 400-on-blank-name → delete → 404-on-redelete cycle via curl,
   all correct, including a create with no `description` (nullable, accepted).
+- `stock-service` now validates a Stock's sector against `sector-service`
+  synchronously, via Spring's built-in `RestClient`, before every create/replace.
+  `config/RestClientConfig` wires up a `RestClient` bean pre-configured with
+  `sector-service.base-url` (new `application.properties` entry, defaulting to
+  `http://localhost:8082`); `service/SectorClient` wraps it with a single
+  `exists(String sectorName)` method (`GET /sectors/{name}`, `true` on 2xx,
+  `false` on 404, anything else — including `sector-service` being unreachable
+  — left to propagate as a `RestClientException`, caught by
+  `GlobalExceptionHandler`'s existing catch-all as a generic 500).
+  `exception/UnknownSectorException` (400, distinct from `StockNotFoundException`'s
+  404 — an unknown sector is bad input, not a missing resource) is thrown by
+  `StockService#save` when `SectorClient#exists` returns false, wired into
+  `GlobalExceptionHandler` the same way as the other custom exceptions.
+  `StockDataSeeder` deliberately keeps writing straight to `StockRepository`
+  (bypassing `StockService`), so seeding on startup still doesn't depend on
+  `sector-service` being up. Tests added: `SectorClientTests` (unit, using
+  `MockRestServiceServer.bindTo(RestClient.Builder)` — no real HTTP call, no
+  need for `sector-service` to be running), `RestClientConfigTests`, plus new
+  `StockServiceTests`/`StockControllerTests` cases for the exists/doesn't-exist
+  and 400 paths. `./mvnw clean verify` passes for the whole reactor: 67 tests
+  total (38 `stock-service` + 29 `sector-service`), both modules still clear
+  the ≥90% JaCoCo coverage gate. End-to-end verified by running both services
+  together: `POST /stocks` with a sector not yet in `sector-service` → 400
+  `"Unknown sector"`; `POST /sectors` to create it in `sector-service`; retried
+  `POST /stocks` → 201 and the stock is readable back; `PUT` on an
+  already-seeded stock to a made-up sector → 400 too. Both roadmap items for
+  this milestone (the RestClient call and its end-to-end verification) are
+  done together since the manual verification *is* the natural way to confirm
+  the implementation — not a separate later task.
 
 ## How to update this plan
 

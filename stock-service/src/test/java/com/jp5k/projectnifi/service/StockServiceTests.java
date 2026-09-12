@@ -1,9 +1,12 @@
 package com.jp5k.projectnifi.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.jp5k.projectnifi.exception.UnknownSectorException;
 import com.jp5k.projectnifi.model.Stock;
 import com.jp5k.projectnifi.repository.StockRepository;
 import java.math.BigDecimal;
@@ -19,7 +22,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 /**
- * Unit tests for {@link StockService}, with {@link StockRepository} mocked.
+ * Unit tests for {@link StockService}, with {@link StockRepository} and
+ * {@link SectorClient} mocked.
  */
 @ExtendWith(MockitoExtension.class)
 class StockServiceTests {
@@ -27,13 +31,16 @@ class StockServiceTests {
     @Mock
     private StockRepository stockRepository;
 
+    @Mock
+    private SectorClient sectorClient;
+
     private StockService stockService;
 
     private final Stock stock = new Stock("NVTD", "NovaTech Dynamics", "Technology", new BigDecimal("142.50"));
 
     @BeforeEach
     void setUp() {
-        stockService = new StockService(stockRepository);
+        stockService = new StockService(stockRepository, sectorClient);
     }
 
     @Test
@@ -59,10 +66,21 @@ class StockServiceTests {
     }
 
     @Test
-    void saveDelegatesToRepository() {
+    void saveDelegatesToRepositoryWhenSectorExists() {
+        when(sectorClient.exists("Technology")).thenReturn(true);
         when(stockRepository.save(stock)).thenReturn(stock);
 
         assertThat(stockService.save(stock)).isEqualTo(stock);
+    }
+
+    @Test
+    void saveThrowsUnknownSectorExceptionWhenSectorDoesNotExistAndNeverPersists() {
+        when(sectorClient.exists("Technology")).thenReturn(false);
+
+        assertThatThrownBy(() -> stockService.save(stock))
+                .isInstanceOf(UnknownSectorException.class)
+                .hasMessage("No sector found with name 'Technology'");
+        verify(stockRepository, never()).save(stock);
     }
 
     @Test
