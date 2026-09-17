@@ -221,7 +221,7 @@ apply continuously as each service/feature lands:
 
 ### Messaging & Dataflow (RabbitMQ + NiFi)
 - [x] `docker-compose.yml` running RabbitMQ (`rabbitmq:management`, UI on :15672) and Apache NiFi (`apache/nifi`, UI on :8443 or :8080) locally
-- [ ] Add `spring-boot-starter-amqp`; connect `stock-service` to local RabbitMQ (simple queue/exchange to start — topic routing comes in the Data Classification milestone below)
+- [x] Add `spring-boot-starter-amqp`; connect `stock-service` to local RabbitMQ (simple queue/exchange to start — topic routing comes in the Data Classification milestone below)
 - [ ] Publish a `StockPriceUpdate` message to RabbitMQ when a price changes — replay `sample-data/price-updates.json` (small script or test) to generate a stream — verify messages arrive in the RabbitMQ management UI
 - [ ] Build a NiFi flow (`ConsumeAMQP` processor) that consumes the queue and does something visible with it (e.g. log to file) — verify on the NiFi canvas
 - [ ] Extend the flow: `ConvertRecord` (JSON reader → XML writer) then `TransformXml` using `nifi/xslt/price-report.xsl` to produce a `<priceReport>` — verify the output matches `sample-data/price-report-example.xml`
@@ -525,6 +525,38 @@ apply continuously as each service/feature lands:
   port publishing only binds IPv4, so a browser trying `::1` first gets
   refused; `127.0.0.1` works fine and is the recommended way to reach these
   locally).
+- `stock-service` now depends on `spring-boot-starter-amqp` and declares the
+  RabbitMQ topology it will publish `StockPriceUpdate` events to:
+  `config/RabbitConfig` defines a `DirectExchange` (`stock.price`), a `Queue`
+  (`stock.price.updates`), and a `Binding` between them with a fixed routing
+  key (`stock.price.update`) — a plain exchange rather than a topic one,
+  deliberately, per this milestone's "simple queue/exchange to start"; the
+  Data Classification milestone later swaps it for a `TopicExchange` keyed by
+  classification. `application.properties` pins `spring.rabbitmq.host` to
+  `127.0.0.1` (not `localhost` — this dev machine resolves `localhost` to the
+  IPv6 loopback first, which Docker's port publishing doesn't bind) plus the
+  default port/`guest`/`guest` credentials, matching the broker in the repo
+  root's `docker-compose.yml`. Added `RabbitConfigTests` (unit tests for the
+  three bean methods). `./mvnw clean verify` passes: reactor still green,
+  `stock-service` at 41/41 tests, both modules still clear the ≥90% JaCoCo
+  gate.
+  Non-obvious finding worth recording: Spring's `AmqpAdmin` does **not**
+  eagerly declare `@Bean` `Queue`/`Exchange`/`Binding`s at app startup by
+  itself — declaration is tied to a connection to the broker actually being
+  created, which normally happens the first time something publishes or a
+  `@RabbitListener` starts. Since this step only wires the topology (no
+  publishing yet), starting `stock-service` alone does **not** make
+  `stock.price`/`stock.price.updates` appear in the RabbitMQ management UI —
+  confirmed by a temporary diagnostic `ApplicationRunner` that forced a
+  connection open and called `RabbitAdmin#initialize()` explicitly, which
+  succeeded instantly and made the queue/exchange appear (diagnostic removed
+  afterward; not part of the real implementation). This is expected to
+  resolve itself naturally once the next roadmap item (actual publishing)
+  lands, since `RabbitTemplate#convertAndSend` will open that first
+  connection itself. Verified end-to-end via the diagnostic against the
+  `docker-compose.yml` broker: connection succeeded, `initialize()` declared
+  all three (exchange, queue, binding) correctly, visible in the management
+  UI's Queues/Streams tab.
 
 ## How to update this plan
 

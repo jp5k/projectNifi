@@ -23,6 +23,13 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 		<dependency>
+			<!-- Connects to RabbitMQ to publish StockPriceUpdate events (see
+			     config/RabbitConfig.java); backed by the local broker started
+			     via the repo root's docker-compose.yml. -->
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-amqp</artifactId>
+		</dependency>
+		<dependency>
 			<!-- Jakarta Bean Validation (Hibernate Validator): drives the
 			     constraint annotations on the request DTOs, enforced by
 			     @Valid in the controller. -->
