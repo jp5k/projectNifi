@@ -1,6 +1,7 @@
 package com.jp5k.projectnifi.controller;
 
 import com.jp5k.projectnifi.dto.StockMapper;
+import com.jp5k.projectnifi.dto.StockPriceUpdateRequest;
 import com.jp5k.projectnifi.dto.StockRequest;
 import com.jp5k.projectnifi.dto.StockResponse;
 import com.jp5k.projectnifi.exception.StockNotFoundException;
@@ -22,7 +23,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Basic CRUD REST endpoints for {@code Stock}.
+ * Basic CRUD REST endpoints for {@code Stock}, plus publishing simulated
+ * price-update events onto RabbitMQ ({@link #publishPriceUpdate}).
  *
  * <p>The API speaks in DTOs — {@link StockRequest} in, {@link StockResponse}
  * out — never the {@link Stock} JPA entity directly, so the HTTP contract and
@@ -117,5 +119,20 @@ public class StockController {
         if (!stockService.deleteBySymbol(symbol)) {
             throw new StockNotFoundException(symbol);
         }
+    }
+
+    /**
+     * Publishes a simulated price tick for the stock at {@code symbol} onto
+     * RabbitMQ. {@code 202 Accepted} rather than {@code 200}/{@code 201}:
+     * this doesn't create or return a persisted resource, it hands a message
+     * off for asynchronous processing by whatever consumes the queue.
+     *
+     * @throws StockNotFoundException if no stock has that symbol (→ 404)
+     */
+    @PostMapping("/{symbol}/price-updates")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public void publishPriceUpdate(
+            @PathVariable String symbol, @Valid @RequestBody StockPriceUpdateRequest request) {
+        stockService.publishPriceUpdate(StockMapper.toPriceUpdate(symbol, request));
     }
 }

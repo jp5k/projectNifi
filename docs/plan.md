@@ -222,7 +222,7 @@ apply continuously as each service/feature lands:
 ### Messaging & Dataflow (RabbitMQ + NiFi)
 - [x] `docker-compose.yml` running RabbitMQ (`rabbitmq:management`, UI on :15672) and Apache NiFi (`apache/nifi`, UI on :8443 or :8080) locally
 - [x] Add `spring-boot-starter-amqp`; connect `stock-service` to local RabbitMQ (simple queue/exchange to start — topic routing comes in the Data Classification milestone below)
-- [ ] Publish a `StockPriceUpdate` message to RabbitMQ when a price changes — replay `sample-data/price-updates.json` (small script or test) to generate a stream — verify messages arrive in the RabbitMQ management UI
+- [x] Publish a `StockPriceUpdate` message to RabbitMQ when a price changes — replay `sample-data/price-updates.json` (small script or test) to generate a stream — verify messages arrive in the RabbitMQ management UI
 - [ ] Build a NiFi flow (`ConsumeAMQP` processor) that consumes the queue and does something visible with it (e.g. log to file) — verify on the NiFi canvas
 - [ ] Extend the flow: `ConvertRecord` (JSON reader → XML writer) then `TransformXml` using `nifi/xslt/price-report.xsl` to produce a `<priceReport>` — verify the output matches `sample-data/price-report-example.xml`
 - [ ] (Optional) Extend the NiFi flow to call back into `stock-service`'s REST API, closing the loop
@@ -557,6 +557,35 @@ apply continuously as each service/feature lands:
   `docker-compose.yml` broker: connection succeeded, `initialize()` declared
   all three (exchange, queue, binding) correctly, visible in the management
   UI's Queues/Streams tab.
+- `stock-service` now actually publishes `StockPriceUpdate` events to
+  RabbitMQ. New `POST /stocks/{symbol}/price-updates` endpoint
+  (`StockController#publishPriceUpdate`, `202 Accepted`) takes a
+  `dto/StockPriceUpdateRequest` (`timestamp`/`price`/`volume`, `@Valid`,
+  symbol from the path — same convention as `StockRequest`/`PUT`), mapped by
+  a new `StockMapper#toPriceUpdate` to a new `dto/StockPriceUpdate` record
+  (the wire/event schema: `symbol`, `timestamp`, `price`, `volume`).
+  `StockService#publishPriceUpdate` checks the symbol exists
+  (`StockNotFoundException` / 404 otherwise, same principle as
+  `UnknownSectorException` for writes) then delegates to a new
+  `service/StockPriceUpdatePublisher` (mirrors `SectorClient`'s shape — a
+  thin wrapper around one outbound integration), which calls
+  `RabbitTemplate#convertAndSend` against `RabbitConfig`'s existing exchange/
+  routing key — this is what finally opens the first broker connection and
+  makes `stock.price`/`stock.price.updates` appear in the management UI (see
+  the now-updated `RabbitConfig` Javadoc). `RabbitConfig` also gained a
+  `Jackson2JsonMessageConverter` bean built from the Boot-managed
+  `ObjectMapper` (not the converter's own bare default), so `Instant`/
+  `BigDecimal` fields serialize consistently with the REST API's own JSON.
+  Added `scripts/replay-price-updates.sh` — replays
+  `sample-data/price-updates.json` through the new endpoint via `curl`/`jq`
+  to generate a stream for manual verification. `./mvnw clean verify` passes
+  for the whole reactor: 81 tests total (52 `stock-service` + 29
+  `sector-service`), both modules still clear the ≥90% JaCoCo coverage gate.
+  End-to-end verified against the `docker-compose.yml` broker: ran
+  `stock-service`, replayed all 30 sample updates with the new script (all
+  `202`), confirmed the RabbitMQ management API showed 90 messages published
+  to `stock.price.updates` (cumulative across runs), and confirmed a tick for
+  an unknown symbol returns `404`.
 
 ## How to update this plan
 

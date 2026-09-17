@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jp5k.projectnifi.model.Stock;
 import java.math.BigDecimal;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -46,5 +47,16 @@ class StockMapperTests {
 
         assertThat(response).isEqualTo(
                 new StockResponse("NVTD", "NovaTech Dynamics", "Technology", new BigDecimal("142.50")));
+    }
+
+    @Test
+    void toPriceUpdateTakesTheSymbolFromTheArgumentAndCopiesTheRequestFields() {
+        StockPriceUpdateRequest request =
+                new StockPriceUpdateRequest(Instant.parse("2026-08-11T09:30:00Z"), new BigDecimal("142.50"), 1200);
+
+        StockPriceUpdate update = StockMapper.toPriceUpdate("NVTD", request);
+
+        assertThat(update).isEqualTo(
+                new StockPriceUpdate("NVTD", Instant.parse("2026-08-11T09:30:00Z"), new BigDecimal("142.50"), 1200));
     }
 }

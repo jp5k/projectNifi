@@ -1,5 +1,7 @@
 package com.jp5k.projectnifi.service;
 
+import com.jp5k.projectnifi.dto.StockPriceUpdate;
+import com.jp5k.projectnifi.exception.StockNotFoundException;
 import com.jp5k.projectnifi.exception.UnknownSectorException;
 import com.jp5k.projectnifi.model.Stock;
 import com.jp5k.projectnifi.repository.StockRepository;
@@ -13,12 +15,13 @@ import org.springframework.stereotype.Service;
  *
  * <p>Mostly a thin pass-through to {@link StockRepository} — basic CRUD, plus
  * validating a stock's sector against {@code sector-service} on write (see
- * {@link #save}). Works in terms of the {@link Stock} entity, not the REST
- * DTOs: the controller owns the HTTP contract and maps to/from DTOs, leaving
- * this layer free to be reused by non-HTTP callers later (e.g. the RabbitMQ
- * publisher). Kept as its own layer regardless, so the controller never talks
- * to the repository directly, and so this is the natural place to add further
- * rules later (e.g. classification filtering).
+ * {@link #save}) and publishing price-update events onto RabbitMQ (see
+ * {@link #publishPriceUpdate}). Works in terms of the {@link Stock} entity,
+ * not the REST DTOs: the controller owns the HTTP contract and maps to/from
+ * DTOs, leaving this layer free to be reused by non-HTTP callers later. Kept
+ * as its own layer regardless, so the controller never talks to the
+ * repository directly, and so this is the natural place to add further rules
+ * later (e.g. classification filtering).
  *
  * <p>Note: {@code StockDataSeeder} deliberately bypasses this class and writes
  * to {@link StockRepository} directly, so startup seeding doesn't depend on
@@ -29,10 +32,15 @@ public class StockService {
 
     private final StockRepository stockRepository;
     private final SectorClient sectorClient;
+    private final StockPriceUpdatePublisher stockPriceUpdatePublisher;
 
-    public StockService(StockRepository stockRepository, SectorClient sectorClient) {
+    public StockService(
+            StockRepository stockRepository,
+            SectorClient sectorClient,
+            StockPriceUpdatePublisher stockPriceUpdatePublisher) {
         this.stockRepository = stockRepository;
         this.sectorClient = sectorClient;
+        this.stockPriceUpdatePublisher = stockPriceUpdatePublisher;
     }
 
     /**
@@ -76,5 +84,20 @@ public class StockService {
         }
         stockRepository.deleteById(symbol);
         return true;
+    }
+
+    /**
+     * Publishes {@code update} onto RabbitMQ via {@link StockPriceUpdatePublisher},
+     * after confirming a stock with its symbol exists — a tick for an unknown
+     * stock is bad input, same principle as {@link UnknownSectorException} for
+     * an unknown sector on write.
+     *
+     * @throws StockNotFoundException if no stock has {@code update}'s symbol
+     */
+    public void publishPriceUpdate(StockPriceUpdate update) {
+        if (!stockRepository.existsById(update.symbol())) {
+            throw new StockNotFoundException(update.symbol());
+        }
+        stockPriceUpdatePublisher.publish(update);
     }
 }

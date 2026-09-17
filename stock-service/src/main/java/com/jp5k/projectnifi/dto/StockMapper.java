@@ -65,4 +65,17 @@ public final class StockMapper {
     public static StockResponse toResponse(Stock stock) {
         return new StockResponse(stock.getSymbol(), stock.getName(), stock.getSector(), stock.getBasePrice());
     }
+
+    /**
+     * Builds the {@link StockPriceUpdate} event to publish from a price-update
+     * request, taking the symbol from the URL path — same rationale as
+     * {@link #toEntity(String, StockRequest)}.
+     *
+     * @param symbol  the identifier from the request path
+     * @param request the incoming request body
+     * @return the event to publish onto RabbitMQ
+     */
+    public static StockPriceUpdate toPriceUpdate(String symbol, StockPriceUpdateRequest request) {
+        return new StockPriceUpdate(symbol, request.timestamp(), request.price(), request.volume());
+    }
 }

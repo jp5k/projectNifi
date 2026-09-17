@@ -6,10 +6,13 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.jp5k.projectnifi.dto.StockPriceUpdate;
+import com.jp5k.projectnifi.exception.StockNotFoundException;
 import com.jp5k.projectnifi.exception.UnknownSectorException;
 import com.jp5k.projectnifi.model.Stock;
 import com.jp5k.projectnifi.repository.StockRepository;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,13 +37,16 @@ class StockServiceTests {
     @Mock
     private SectorClient sectorClient;
 
+    @Mock
+    private StockPriceUpdatePublisher stockPriceUpdatePublisher;
+
     private StockService stockService;
 
     private final Stock stock = new Stock("NVTD", "NovaTech Dynamics", "Technology", new BigDecimal("142.50"));
 
     @BeforeEach
     void setUp() {
-        stockService = new StockService(stockRepository, sectorClient);
+        stockService = new StockService(stockRepository, sectorClient, stockPriceUpdatePublisher);
     }
 
     @Test
@@ -96,5 +102,27 @@ class StockServiceTests {
         when(stockRepository.existsById("UNKNOWN")).thenReturn(false);
 
         assertThat(stockService.deleteBySymbol("UNKNOWN")).isFalse();
+    }
+
+    @Test
+    void publishPriceUpdateDelegatesToPublisherWhenStockExists() {
+        StockPriceUpdate update =
+                new StockPriceUpdate("NVTD", Instant.parse("2026-08-11T09:30:00Z"), new BigDecimal("142.50"), 1200);
+        when(stockRepository.existsById("NVTD")).thenReturn(true);
+
+        stockService.publishPriceUpdate(update);
+
+        verify(stockPriceUpdatePublisher).publish(update);
+    }
+
+    @Test
+    void publishPriceUpdateThrowsStockNotFoundExceptionWhenStockDoesNotExistAndNeverPublishes() {
+        StockPriceUpdate update =
+                new StockPriceUpdate("UNKNOWN", Instant.parse("2026-08-11T09:30:00Z"), new BigDecimal("142.50"), 1200);
+        when(stockRepository.existsById("UNKNOWN")).thenReturn(false);
+
+        assertThatThrownBy(() -> stockService.publishPriceUpdate(update))
+                .isInstanceOf(StockNotFoundException.class);
+        verify(stockPriceUpdatePublisher, never()).publish(update);
     }
 }

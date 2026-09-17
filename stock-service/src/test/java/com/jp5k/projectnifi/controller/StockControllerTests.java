@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -16,10 +17,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.jp5k.projectnifi.dto.StockPriceUpdate;
+import com.jp5k.projectnifi.exception.StockNotFoundException;
 import com.jp5k.projectnifi.exception.UnknownSectorException;
 import com.jp5k.projectnifi.model.Stock;
 import com.jp5k.projectnifi.service.StockService;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -258,6 +262,88 @@ class StockControllerTests {
         mockMvc.perform(post("/stocks")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{ not json "))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(stockService);
+    }
+
+    @Test
+    void publishPriceUpdateReturns202AndPassesTheMappedEventToTheService() throws Exception {
+        mockMvc.perform(post("/stocks/NVTD/price-updates")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(
+                                """
+                                {"timestamp":"2026-08-11T09:30:00Z","price":142.50,"volume":1200}
+                                """))
+                .andExpect(status().isAccepted());
+
+        verify(stockService)
+                .publishPriceUpdate(new StockPriceUpdate(
+                        "NVTD", Instant.parse("2026-08-11T09:30:00Z"), new BigDecimal("142.50"), 1200));
+    }
+
+    @Test
+    void publishPriceUpdateReturns404ProblemDetailWhenStockDoesNotExist() throws Exception {
+        doThrow(new StockNotFoundException("UNKNOWN")).when(stockService).publishPriceUpdate(any());
+
+        mockMvc.perform(post("/stocks/UNKNOWN/price-updates")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(
+                                """
+                                {"timestamp":"2026-08-11T09:30:00Z","price":142.50,"volume":1200}
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType("application/problem+json"))
+                .andExpect(jsonPath("$.detail").value("No stock found with symbol 'UNKNOWN'"));
+    }
+
+    @Test
+    void publishPriceUpdateReturns400WhenPriceIsMissing() throws Exception {
+        mockMvc.perform(post("/stocks/NVTD/price-updates")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(
+                                """
+                                {"timestamp":"2026-08-11T09:30:00Z","volume":1200}
+                                """))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(stockService);
+    }
+
+    @Test
+    void publishPriceUpdateReturns400WhenPriceIsNotPositive() throws Exception {
+        mockMvc.perform(post("/stocks/NVTD/price-updates")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(
+                                """
+                                {"timestamp":"2026-08-11T09:30:00Z","price":0,"volume":1200}
+                                """))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(stockService);
+    }
+
+    @Test
+    void publishPriceUpdateReturns400WhenTimestampIsMissing() throws Exception {
+        mockMvc.perform(post("/stocks/NVTD/price-updates")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(
+                                """
+                                {"price":142.50,"volume":1200}
+                                """))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(stockService);
+    }
+
+    @Test
+    void publishPriceUpdateReturns400WhenVolumeIsNotPositive() throws Exception {
+        mockMvc.perform(post("/stocks/NVTD/price-updates")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(
+                                """
+                                {"timestamp":"2026-08-11T09:30:00Z","price":142.50,"volume":0}
+                                """))
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(stockService);
