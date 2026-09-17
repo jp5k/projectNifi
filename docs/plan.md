@@ -220,7 +220,7 @@ apply continuously as each service/feature lands:
 - [x] Verify end-to-end: create a Sector via `sector-service`, then create a Stock in `stock-service` referencing it, confirm the cross-service call works
 
 ### Messaging & Dataflow (RabbitMQ + NiFi)
-- [ ] `docker-compose.yml` running RabbitMQ (`rabbitmq:management`, UI on :15672) and Apache NiFi (`apache/nifi`, UI on :8443 or :8080) locally
+- [x] `docker-compose.yml` running RabbitMQ (`rabbitmq:management`, UI on :15672) and Apache NiFi (`apache/nifi`, UI on :8443 or :8080) locally
 - [ ] Add `spring-boot-starter-amqp`; connect `stock-service` to local RabbitMQ (simple queue/exchange to start — topic routing comes in the Data Classification milestone below)
 - [ ] Publish a `StockPriceUpdate` message to RabbitMQ when a price changes — replay `sample-data/price-updates.json` (small script or test) to generate a stream — verify messages arrive in the RabbitMQ management UI
 - [ ] Build a NiFi flow (`ConsumeAMQP` processor) that consumes the queue and does something visible with it (e.g. log to file) — verify on the NiFi canvas
@@ -504,6 +504,27 @@ apply continuously as each service/feature lands:
   this milestone (the RestClient call and its end-to-end verification) are
   done together since the manual verification *is* the natural way to confirm
   the implementation — not a separate later task.
+- `docker-compose.yml` added at the repo root, running local infrastructure
+  for the Messaging & Dataflow milestone: `rabbitmq:3.13-management` (AMQP on
+  `:5672`, management UI on `:15672`, default `guest`/`guest` creds) and
+  `apache/nifi:1.27.0`, configured via `NIFI_WEB_HTTP_PORT=8080` for plain
+  HTTP on `:8080/nifi` rather than the image's default self-signed-HTTPS +
+  auto-generated credentials (simpler for local dev). Neither is a Spring Boot
+  app, so this lives outside the Maven build — started/stopped independently
+  with `docker compose up -d` / `down`. Getting `docker compose` itself
+  working needed a couple of one-off host fixes unrelated to the repo:
+  installing the Compose v2 plugin (Ubuntu's `docker.io` package doesn't
+  bundle it, and `docker-compose-plugin` isn't in Ubuntu's default apt repos
+  either — installed as a binary into `~/.docker/cli-plugins/` per Docker's
+  own instructions) and adding the user to the `docker` group (`docker.sock`
+  otherwise needs `sudo`). Verified: both containers start cleanly; RabbitMQ
+  management UI and NiFi UI (NiFi takes 1-3 minutes to finish booting) are
+  both reachable at `http://127.0.0.1:15672` and `http://127.0.0.1:8080/nifi`
+  (`localhost` itself didn't resolve in the browser — an IPv6-vs-IPv4
+  resolution quirk on the host, not a compose/project issue: Docker's default
+  port publishing only binds IPv4, so a browser trying `::1` first gets
+  refused; `127.0.0.1` works fine and is the recommended way to reach these
+  locally).
 
 ## How to update this plan
 
