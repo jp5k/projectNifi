@@ -36,3 +36,9 @@ services:
       - "8080:8080"
     environment:
       NIFI_WEB_HTTP_PORT: "8080"
+    volumes:
+      # Where the flow's PutFile processor writes consumed StockPriceUpdate
+      # events, so they're inspectable from the host without a shell into the
+      # container. The image runs as uid 1000, matching the host user here,
+      # so no permission fixup is needed.
+      - ./nifi/output:/opt/nifi/output

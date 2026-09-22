@@ -1,0 +1,4 @@
+# Files PutFile writes here during manual verification (see docs/plan.md's
+# Messaging & Dataflow milestone) are throwaway — never committed.
+*
+!.gitignore

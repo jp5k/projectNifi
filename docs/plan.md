@@ -223,7 +223,7 @@ apply continuously as each service/feature lands:
 - [x] `docker-compose.yml` running RabbitMQ (`rabbitmq:management`, UI on :15672) and Apache NiFi (`apache/nifi`, UI on :8443 or :8080) locally
 - [x] Add `spring-boot-starter-amqp`; connect `stock-service` to local RabbitMQ (simple queue/exchange to start — topic routing comes in the Data Classification milestone below)
 - [x] Publish a `StockPriceUpdate` message to RabbitMQ when a price changes — replay `sample-data/price-updates.json` (small script or test) to generate a stream — verify messages arrive in the RabbitMQ management UI
-- [ ] Build a NiFi flow (`ConsumeAMQP` processor) that consumes the queue and does something visible with it (e.g. log to file) — verify on the NiFi canvas
+- [x] Build a NiFi flow (`ConsumeAMQP` processor) that consumes the queue and does something visible with it (e.g. log to file) — verify on the NiFi canvas
 - [ ] Extend the flow: `ConvertRecord` (JSON reader → XML writer) then `TransformXml` using `nifi/xslt/price-report.xsl` to produce a `<priceReport>` — verify the output matches `sample-data/price-report-example.xml`
 - [ ] (Optional) Extend the NiFi flow to call back into `stock-service`'s REST API, closing the loop
 
@@ -586,6 +586,34 @@ apply continuously as each service/feature lands:
   `202`), confirmed the RabbitMQ management API showed 90 messages published
   to `stock.price.updates` (cumulative across runs), and confirmed a tick for
   an unknown symbol returns `404`.
+- First NiFi flow is built and verified: `ConsumeAMQP` → `PutFile`, connected
+  via `success`. `ConsumeAMQP` points at `Host Name=rabbitmq` (the Compose
+  service name — resolves over the default Compose network the two containers
+  already share, confirmed via `docker exec` + `/dev/tcp`), `Port=5672`,
+  `Queue=stock.price.updates`, `Virtual Host=/`, `guest`/`guest`. `PutFile`
+  writes each consumed FlowFile's content to `/opt/nifi/output` inside the
+  container, one file per message (filename = NiFi's generated FlowFile UUID),
+  with `success`/`failure` auto-terminated (nothing downstream yet — that's
+  the next roadmap item). Built entirely via NiFi's REST API (`POST
+  .../processors`, `POST .../connections`, `PUT .../run-status`) rather than
+  the canvas UI, since this environment has no GUI access — same end state a
+  human would get clicking through the canvas.
+  `docker-compose.yml`'s `nifi` service gained a bind mount,
+  `./nifi/output:/opt/nifi/output` (new `nifi/output/` dir, `.gitignore`d
+  except for its own `.gitignore` — the image runs as uid 1000, matching the
+  host user here, so no permission fixup was needed), so PutFile's output is
+  inspectable from the host instead of only via `docker exec` — this is the
+  "visible" proof the roadmap item asks for.
+  Verified end-to-end: with both processors `RUNNING` and validation `VALID`
+  (confirmed via `GET .../processors/{id}`, no bulletins on
+  `GET .../flow/bulletin-board`), ran `scripts/replay-price-updates.sh`
+  against a live `stock-service` — all 30 sample updates published `202`, all
+  30 landed as separate files under `nifi/output/` (spot-checked several,
+  content matches the exact `StockPriceUpdate` JSON published, e.g.
+  `{"symbol":"NVTD","timestamp":"2026-08-11T09:30:00Z","price":142.50,"volume":1200}`),
+  and the RabbitMQ queue drained back to 0 messages afterward, confirming
+  `ConsumeAMQP` is actually keeping up with the stream, not just handling a
+  one-off message.
 
 ## How to update this plan
 
