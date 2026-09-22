@@ -224,6 +224,7 @@ apply continuously as each service/feature lands:
 - [x] Add `spring-boot-starter-amqp`; connect `stock-service` to local RabbitMQ (simple queue/exchange to start — topic routing comes in the Data Classification milestone below)
 - [x] Publish a `StockPriceUpdate` message to RabbitMQ when a price changes — replay `sample-data/price-updates.json` (small script or test) to generate a stream — verify messages arrive in the RabbitMQ management UI
 - [x] Build a NiFi flow (`ConsumeAMQP` processor) that consumes the queue and does something visible with it (e.g. log to file) — verify on the NiFi canvas
+- [ ] Persist the NiFi flow across container restarts — bind-mount NiFi's `conf/` directory (where `flow.xml.gz`, plus controller-service/provenance state, live) in `docker-compose.yml`, so `docker compose down`/`up` no longer loses the canvas (confirmed the hard way: the `ConsumeAMQP` → `PutFile` flow built for the previous item didn't survive `docker compose down`, since nothing about it was persisted to disk). Do this **first**, before extending the flow further, so the next item's work isn't at risk of the same loss.
 - [ ] Extend the flow: `ConvertRecord` (JSON reader → XML writer) then `TransformXml` using `nifi/xslt/price-report.xsl` to produce a `<priceReport>` — verify the output matches `sample-data/price-report-example.xml`
 - [ ] (Optional) Extend the NiFi flow to call back into `stock-service`'s REST API, closing the loop
 
