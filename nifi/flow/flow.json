@@ -1,0 +1,170 @@
+{
+  "encodingVersion": {
+    "majorVersion": 2,
+    "minorVersion": 0
+  },
+  "maxTimerDrivenThreadCount": 10,
+  "maxEventDrivenThreadCount": 1,
+  "registries": [],
+  "parameterContexts": [],
+  "parameterProviders": [],
+  "controllerServices": [],
+  "reportingTasks": [],
+  "templates": [],
+  "rootGroup": {
+    "identifier": "c8141a4b-3d87-3ddd-85ac-0b801741934f",
+    "instanceIdentifier": "d00d248d-01a0-1000-ff4d-7efd3ec208eb",
+    "name": "NiFi Flow",
+    "comments": "",
+    "position": {
+      "x": 0.0,
+      "y": 0.0
+    },
+    "processGroups": [],
+    "remoteProcessGroups": [],
+    "processors": [
+      {
+        "identifier": "174d807e-efc1-3fb1-a415-a154fa902f25",
+        "instanceIdentifier": "d00d899d-01a0-1000-b7d3-983e6d443830",
+        "name": "ConsumeAMQP",
+        "comments": "",
+        "position": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "type": "org.apache.nifi.amqp.processors.ConsumeAMQP",
+        "bundle": {
+          "group": "org.apache.nifi",
+          "artifact": "nifi-amqp-nar",
+          "version": "1.27.0"
+        },
+        "properties": {
+          "User Name": "guest",
+          "ssl-client-auth": "NONE",
+          "batch.size": "10",
+          "Port": "5672",
+          "cert-authentication": "false",
+          "auto.acknowledge": "false",
+          "Host Name": "rabbitmq",
+          "prefetch.count": "0",
+          "header.key.prefix": "consume.amqp",
+          "header.separator": ",",
+          "AMQP Version": "0.9.1",
+          "header.format": "Comma-Separated String",
+          "Virtual Host": "/",
+          "Queue": "stock.price.updates",
+          "remove.curly.braces": "False",
+          "Password": "enc{3d4ec6304adbfe3a030c9e8faa2856065418440118fd5615df484a80aba26a4cefd8df9821}"
+        },
+        "propertyDescriptors": {},
+        "style": {},
+        "schedulingPeriod": "0 sec",
+        "schedulingStrategy": "TIMER_DRIVEN",
+        "executionNode": "ALL",
+        "penaltyDuration": "30 sec",
+        "yieldDuration": "1 sec",
+        "bulletinLevel": "WARN",
+        "runDurationMillis": 0,
+        "concurrentlySchedulableTaskCount": 1,
+        "autoTerminatedRelationships": [],
+        "scheduledState": "RUNNING",
+        "retryCount": 10,
+        "retriedRelationships": [],
+        "backoffMechanism": "PENALIZE_FLOWFILE",
+        "maxBackoffPeriod": "10 mins",
+        "componentType": "PROCESSOR",
+        "groupIdentifier": "c8141a4b-3d87-3ddd-85ac-0b801741934f"
+      },
+      {
+        "identifier": "3ce6e023-f762-361e-82e9-d681d1b2a32a",
+        "instanceIdentifier": "d00d8b62-01a0-1000-023e-a24fd125a449",
+        "name": "PutFile",
+        "comments": "",
+        "position": {
+          "x": 0.0,
+          "y": 250.0
+        },
+        "type": "org.apache.nifi.processors.standard.PutFile",
+        "bundle": {
+          "group": "org.apache.nifi",
+          "artifact": "nifi-standard-nar",
+          "version": "1.27.0"
+        },
+        "properties": {
+          "Create Missing Directories": "true",
+          "Directory": "/opt/nifi/output",
+          "Conflict Resolution Strategy": "fail"
+        },
+        "propertyDescriptors": {},
+        "style": {},
+        "schedulingPeriod": "0 sec",
+        "schedulingStrategy": "TIMER_DRIVEN",
+        "executionNode": "ALL",
+        "penaltyDuration": "30 sec",
+        "yieldDuration": "1 sec",
+        "bulletinLevel": "WARN",
+        "runDurationMillis": 0,
+        "concurrentlySchedulableTaskCount": 1,
+        "autoTerminatedRelationships": [
+          "success",
+          "failure"
+        ],
+        "scheduledState": "RUNNING",
+        "retryCount": 10,
+        "retriedRelationships": [],
+        "backoffMechanism": "PENALIZE_FLOWFILE",
+        "maxBackoffPeriod": "10 mins",
+        "componentType": "PROCESSOR",
+        "groupIdentifier": "c8141a4b-3d87-3ddd-85ac-0b801741934f"
+      }
+    ],
+    "inputPorts": [],
+    "outputPorts": [],
+    "connections": [
+      {
+        "identifier": "af372a45-eec6-3efb-9d95-ec79422e4540",
+        "instanceIdentifier": "d00d8bac-01a0-1000-a04c-5df82a75f1e2",
+        "source": {
+          "id": "174d807e-efc1-3fb1-a415-a154fa902f25",
+          "type": "PROCESSOR",
+          "groupId": "c8141a4b-3d87-3ddd-85ac-0b801741934f",
+          "name": "ConsumeAMQP",
+          "comments": "",
+          "instanceIdentifier": "d00d899d-01a0-1000-b7d3-983e6d443830"
+        },
+        "destination": {
+          "id": "3ce6e023-f762-361e-82e9-d681d1b2a32a",
+          "type": "PROCESSOR",
+          "groupId": "c8141a4b-3d87-3ddd-85ac-0b801741934f",
+          "name": "PutFile",
+          "comments": "",
+          "instanceIdentifier": "d00d8b62-01a0-1000-023e-a24fd125a449"
+        },
+        "labelIndex": 1,
+        "zIndex": 0,
+        "selectedRelationships": [
+          "success"
+        ],
+        "backPressureObjectThreshold": 10000,
+        "backPressureDataSizeThreshold": "1 GB",
+        "flowFileExpiration": "0 sec",
+        "prioritizers": [],
+        "bends": [],
+        "loadBalanceStrategy": "DO_NOT_LOAD_BALANCE",
+        "loadBalanceCompression": "DO_NOT_COMPRESS",
+        "componentType": "CONNECTION",
+        "groupIdentifier": "c8141a4b-3d87-3ddd-85ac-0b801741934f"
+      }
+    ],
+    "labels": [],
+    "funnels": [],
+    "controllerServices": [],
+    "variables": {},
+    "defaultFlowFileExpiration": "0 sec",
+    "defaultBackPressureObjectThreshold": 10000,
+    "defaultBackPressureDataSizeThreshold": "1 GB",
+    "componentType": "PROCESS_GROUP",
+    "flowFileConcurrency": "UNBOUNDED",
+    "flowFileOutboundPolicy": "STREAM_WHEN_AVAILABLE"
+  }
+}

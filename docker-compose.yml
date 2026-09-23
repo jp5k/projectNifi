@@ -9,7 +9,10 @@
 #   docker compose up -d      # start both in the background
 #   docker compose logs -f    # tail logs (nifi in particular takes a while
 #                              # to finish booting on first start)
-#   docker compose down       # stop and remove both containers
+#   docker compose down       # stop and remove both containers (NiFi's
+#                              # flow survives in named volumes)
+#   docker compose down -v    # ...and also wipe those volumes (next up
+#                              # re-seeds the flow from nifi/flow/flow.json)
 
 services:
   rabbitmq:
@@ -34,11 +37,52 @@ services:
       # collide with stock-service (:8081), sector-service (:8082), or
       # notification-service (:8083).
       - "8080:8080"
+    # On a fresh (empty) conf volume, seed the canvas from the committed
+    # nifi/flow/flow.json before handing over to the image's normal startup
+    # script. An existing flow is never overwritten, so edits made in the UI
+    # survive restarts — run scripts/export-nifi-flow.sh to copy them back
+    # into the repo. See nifi/flow/README.md.
+    entrypoint:
+      - /bin/bash
+      - -c
+      - >-
+        if [ ! -f conf/flow.json.gz ] && [ -f /opt/nifi/seed/flow.json ]; then
+        gzip -c /opt/nifi/seed/flow.json > conf/flow.json.gz; fi;
+        exec ../scripts/start.sh
     environment:
       NIFI_WEB_HTTP_PORT: "8080"
+      # Key NiFi encrypts sensitive processor properties (e.g. ConsumeAMQP's
+      # password) with, inside flow.json. Fixed rather than the image's
+      # random per-install default so the committed flow decrypts on any
+      # machine. Local-dev only, same spirit as RabbitMQ's guest/guest — it
+      # protects nothing secret.
+      NIFI_SENSITIVE_PROPS_KEY: "projectnifi-local-dev-key"
     volumes:
+      # The committed flow the entrypoint above seeds from (read-only).
+      - ./nifi/flow:/opt/nifi/seed:ro
       # Where the flow's PutFile processor writes consumed StockPriceUpdate
       # events, so they're inspectable from the host without a shell into the
       # container. The image runs as uid 1000, matching the host user here,
       # so no permission fixup is needed.
       - ./nifi/output:/opt/nifi/output
+      # Named volumes so the canvas (conf/flow.xml.gz + flow.json.gz), queued
+      # FlowFiles, and processor state survive `docker compose down`/`up`.
+      # Named rather than bind-mounted: on first use Docker seeds a named
+      # volume from the image's own contents, so conf/ keeps its default
+      # nifi.properties, bootstrap.conf, etc. — an empty bind mount would hide
+      # them and NiFi wouldn't boot. Wipe everything with
+      # `docker compose down -v`.
+      - nifi-conf:/opt/nifi/nifi-current/conf
+      - nifi-state:/opt/nifi/nifi-current/state
+      - nifi-database:/opt/nifi/nifi-current/database_repository
+      - nifi-flowfile:/opt/nifi/nifi-current/flowfile_repository
+      - nifi-content:/opt/nifi/nifi-current/content_repository
+      - nifi-provenance:/opt/nifi/nifi-current/provenance_repository
+
+volumes:
+  nifi-conf:
+  nifi-state:
+  nifi-database:
+  nifi-flowfile:
+  nifi-content:
+  nifi-provenance:

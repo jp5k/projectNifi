@@ -224,7 +224,8 @@ apply continuously as each service/feature lands:
 - [x] Add `spring-boot-starter-amqp`; connect `stock-service` to local RabbitMQ (simple queue/exchange to start — topic routing comes in the Data Classification milestone below)
 - [x] Publish a `StockPriceUpdate` message to RabbitMQ when a price changes — replay `sample-data/price-updates.json` (small script or test) to generate a stream — verify messages arrive in the RabbitMQ management UI
 - [x] Build a NiFi flow (`ConsumeAMQP` processor) that consumes the queue and does something visible with it (e.g. log to file) — verify on the NiFi canvas
-- [ ] Persist the NiFi flow across container restarts — bind-mount NiFi's `conf/` directory (where `flow.xml.gz`, plus controller-service/provenance state, live) in `docker-compose.yml`, so `docker compose down`/`up` no longer loses the canvas (confirmed the hard way: the `ConsumeAMQP` → `PutFile` flow built for the previous item didn't survive `docker compose down`, since nothing about it was persisted to disk). Do this **first**, before extending the flow further, so the next item's work isn't at risk of the same loss.
+- [x] Persist the NiFi flow across container restarts — bind-mount NiFi's `conf/` directory (where `flow.xml.gz`, plus controller-service/provenance state, live) in `docker-compose.yml`, so `docker compose down`/`up` no longer loses the canvas (confirmed the hard way: the `ConsumeAMQP` → `PutFile` flow built for the previous item didn't survive `docker compose down`, since nothing about it was persisted to disk). Do this **first**, before extending the flow further, so the next item's work isn't at risk of the same loss.
+- [x] Version-control the NiFi flow so a fresh checkout starts with it — commit the canvas as `nifi/flow/flow.json`, seed it into a fresh NiFi on first boot (no REST calls, no clicking), plus a script to export UI changes back into the repo
 - [ ] Extend the flow: `ConvertRecord` (JSON reader → XML writer) then `TransformXml` using `nifi/xslt/price-report.xsl` to produce a `<priceReport>` — verify the output matches `sample-data/price-report-example.xml`
 - [ ] (Optional) Extend the NiFi flow to call back into `stock-service`'s REST API, closing the loop
 
@@ -615,6 +616,48 @@ apply continuously as each service/feature lands:
   and the RabbitMQ queue drained back to 0 messages afterward, confirming
   `ConsumeAMQP` is actually keeping up with the stream, not just handling a
   one-off message.
+- NiFi flow now survives `docker compose down`/`up` (2026-09-23). Went with
+  Docker **named volumes** rather than bind-mounting `conf/`: on first use
+  Docker seeds a named volume from the image, so `conf/` keeps its default
+  `nifi.properties`/`bootstrap.conf` etc. (an empty bind mount would hide
+  them and NiFi wouldn't boot). Six volumes on the `nifi` service under
+  `/opt/nifi/nifi-current/`: `conf` (holds `flow.xml.gz` + `flow.json.gz` —
+  the canvas), `state`, and the `database`/`flowfile`/`content`/`provenance`
+  repositories (so queued FlowFiles and history survive too, not just the
+  canvas). `docker compose down -v` wipes them for a clean slate. RabbitMQ
+  deliberately still has no volume — the `stock.price.updates` queue is
+  declared by `stock-service` on startup, so until it runs `ConsumeAMQP`
+  logs a harmless `NOT_FOUND - no queue` bulletin and retries.
+  Verified: rebuilt `ConsumeAMQP` → `PutFile` via the REST API, ran
+  `docker compose down` (containers removed) then `up -d` — both processors
+  came back with the same IDs, `RUNNING` and `VALID`, connection intact.
+  Then started `stock-service` and replayed all 30 sample updates (all
+  `202`): 30 files landed in `nifi/output/`, queue drained to 0 with 1
+  consumer attached.
+- NiFi flow is now version-controlled (2026-09-23): a fresh clone (or
+  `docker compose down -v`) comes up with `ConsumeAMQP` → `PutFile` already
+  built and running, no REST calls or clicking. The canvas is committed as
+  `nifi/flow/flow.json` (plain, pretty-printed JSON for readable diffs).
+  `docker-compose.yml` overrides the `nifi` entrypoint to gzip it into
+  `conf/flow.json.gz` only when that file doesn't exist yet, then `exec`s the
+  image's own `start.sh` — so an existing volume is never overwritten and UI
+  edits still survive restarts. `scripts/export-nifi-flow.sh` copies the live
+  canvas back into the repo (`docker exec … cat` + `gunzip` + `jq`, no REST).
+  Sensitive properties (ConsumeAMQP's password) are stored `enc{...}`, so
+  `NIFI_SENSITIVE_PROPS_KEY` is now fixed in `docker-compose.yml` (local-dev
+  only, like `guest`/`guest`) instead of NiFi's random per-install key —
+  otherwise the committed flow wouldn't decrypt on another machine. Existing
+  volumes from before this change need one `docker compose down -v`. NiFi
+  re-salts the `enc{...}` value on every save, so each export shows a change
+  on that line even when the password hasn't changed. Details in
+  `nifi/flow/README.md`.
+  Verified: `docker compose down -v` (all volumes removed) → `up -d` → both
+  processors `RUNNING`/`VALID` with the connection, seeded purely from the
+  repo file; `stock-service` + replay script → all 30 `202`, 30 files in
+  `nifi/output/`, queue drained to 0 with 1 consumer (so the password
+  decrypted fine). Moved `PutFile`, `down`/`up` → move kept (seed didn't
+  overwrite); export script picked the move up in `flow.json` (that test
+  change was then reverted).
 
 ## How to update this plan
 
